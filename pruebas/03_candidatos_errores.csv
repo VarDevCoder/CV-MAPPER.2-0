@@ -1,0 +1,8 @@
+Nombre;Cargo;Experiencia;Habilidades;Correo;Salario
+Juan Correo Malo;Soporte Técnico;2;Redes, Windows;juan.sin.arroba.com;2500000
+Laura Años Negativos;Analista QA;-3;Testing manual;laura.qa@correo.com;3000000
+Pablo Salario Texto;Desarrollador PHP;4;Laravel, MySQL;pablo.php@correo.com;mucho
+Elena Salario Negativo;Administradora BD;7;Oracle, PL/SQL;elena.bd@correo.com;-500000
+Raúl Todo Mal;Becario;abc;Excel;raul@;-1
+Marta Campos Vacíos;;;;;
+Sergio Correcto;Desarrollador Java;5;Java, Spring Boot;sergio.java@correo.com;5200000

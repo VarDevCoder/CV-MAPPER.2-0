@@ -1,0 +1,3 @@
+Este archivo es .txt: la app debe rechazarlo con "Formato no soportado".
+Nombre;Puesto
+Prueba;Prueba
