@@ -17,8 +17,9 @@ interface Props {
   onCambiar: (columna: string, valor: string) => void;
   // Descarta las ediciones y vuelve a los valores del archivo.
   onRestaurar: () => void;
-  onAnterior: () => void;
-  onSiguiente: () => void;
+  // Navegación por las filas filtradas (null si no hay anterior/siguiente).
+  onAnterior: (() => void) | null;
+  onSiguiente: (() => void) | null;
 }
 
 // Texto de ayuda según el tipo del campo.
@@ -132,14 +133,19 @@ export function RecordForm({
           })}
 
           <div className="acciones campo-ancho">
-            <button type="button" className="boton-secundario" disabled={indice === 0} onClick={onAnterior}>
+            <button
+              type="button"
+              className="boton-secundario"
+              disabled={!onAnterior}
+              onClick={() => onAnterior?.()}
+            >
               <ChevronLeft size={16} /> Anterior
             </button>
             <button
               type="button"
               className="boton-secundario"
-              disabled={indice >= total - 1}
-              onClick={onSiguiente}
+              disabled={!onSiguiente}
+              onClick={() => onSiguiente?.()}
             >
               Siguiente <ChevronRight size={16} />
             </button>

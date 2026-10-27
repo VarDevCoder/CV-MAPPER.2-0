@@ -30,3 +30,22 @@ export interface LibroImportado {
 
 // Ediciones del usuario por índice de fila (clave como texto por JSON).
 export type Ediciones = Record<string, Registro>;
+
+// Filtro de una columna. Se usan solo las claves que aplican a su tipo.
+export interface FiltroCampo {
+  min?: string; // números: valor mínimo (inclusive)
+  max?: string; // números: valor máximo (inclusive)
+  valores?: string[]; // listas separadas por coma: valores exigidos
+  modo?: "todos" | "alguno"; // listas: exigir todos o al menos uno
+  texto?: string; // texto: "contiene"
+  correo?: "validos" | "invalidos"; // correos: solo válidos o inválidos
+}
+
+// Filtros activos por nombre de columna.
+export type Filtros = Record<string, FiltroCampo>;
+
+// Orden de la tabla por una columna.
+export interface Orden {
+  columna: string;
+  direccion: "asc" | "desc";
+}

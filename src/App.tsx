@@ -1,14 +1,25 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Save, Table2, Trash2 } from "lucide-react";
 import { Stepper } from "./components/Stepper";
 import { FileUploader } from "./components/FileUploader";
 import { FieldConfigurator } from "./components/FieldConfigurator";
 import { RecordTable } from "./components/RecordTable";
+import { RecordFilters } from "./components/RecordFilters";
 import { RecordForm } from "./components/RecordForm";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { inferirCampos } from "./utils/inferencia";
+import { esColumnaSensible, inferirCampos } from "./utils/inferencia";
+import { aplicarFiltros, esColumnaLista } from "./utils/filtros";
 import { descargarCSV, descargarExcel } from "./utils/exportar";
-import type { CampoDinamico, Ediciones, Hoja, LibroImportado, Registro } from "./types";
+import type {
+  CampoDinamico,
+  Ediciones,
+  FiltroCampo,
+  Filtros,
+  Hoja,
+  LibroImportado,
+  Orden,
+  Registro,
+} from "./types";
 
 // Claves de localStorage agrupadas en un solo lugar. El prefijo v2 evita
 // leer datos guardados por la versión anterior (campos fijos de CV).
@@ -20,9 +31,14 @@ const CLAVES = {
   confirmado: "tablaapp.v2.confirmado",
   seleccionado: "tablaapp.v2.seleccionado",
   ediciones: "tablaapp.v2.ediciones",
+  filtros: "tablaapp.v2.filtros",
+  orden: "tablaapp.v2.orden",
 };
 
 const TIPOS_VALIDOS = ["texto", "numero", "email"];
+
+// Referencia fija para "sin filtros" (evita reiniciar la paginación en cada render).
+const SIN_FILTROS: Filtros = {};
 
 // --- Defensas contra un localStorage inconsistente o editado a mano ---
 
@@ -69,6 +85,10 @@ export default function App() {
     null
   );
   const [edicionesGuardadas, setEdiciones] = useLocalStorage<Ediciones>(CLAVES.ediciones, {});
+  const [filtrosGuardados, setFiltros] = useLocalStorage<Filtros>(CLAVES.filtros, {});
+  const [ordenGuardado, setOrden] = useLocalStorage<Orden | null>(CLAVES.orden, null);
+  // La búsqueda es momentánea: no se persiste.
+  const [busqueda, setBusqueda] = useState("");
 
   // --- Valores saneados (nunca confiamos en lo que vino del storage) ---
   const libro = libroValido(libroGuardado);
@@ -111,6 +131,34 @@ export default function App() {
       .filter((i) => Number.isInteger(i) && i >= 0 && i < totalFilas)
   );
 
+  // --- Filtros y orden ---
+  // Las columnas con datos sensibles (raza, edad, género…) no se filtran ni ordenan.
+  const camposFiltrables = camposVisibles.filter((c) => !esColumnaSensible(c.columna));
+  const camposSensibles = camposVisibles.filter((c) => esColumnaSensible(c.columna));
+  const filtros = esObjeto(filtrosGuardados) ? (filtrosGuardados as Filtros) : SIN_FILTROS;
+  const orden =
+    esObjeto(ordenGuardado) &&
+    camposFiltrables.some((c) => c.columna === ordenGuardado.columna) &&
+    (ordenGuardado.direccion === "asc" || ordenGuardado.direccion === "desc")
+      ? ordenGuardado
+      : null;
+  // Las listas se detectan con los valores del archivo para que no cambien al editar.
+  const columnasLista = useMemo(
+    () => new Set(hoja ? campos.filter((c) => esColumnaLista(c, hoja.filas)).map((c) => c.columna) : []),
+    [hoja, campos]
+  );
+  const indicesFiltrados = aplicarFiltros({
+    registros,
+    camposVisibles,
+    camposFiltrables,
+    columnasLista,
+    filtros,
+    busqueda,
+    orden,
+  });
+  // Posición de la fila elegida dentro de las filtradas (para Anterior/Siguiente).
+  const posicion = seleccionado !== null ? indicesFiltrados.indexOf(seleccionado) : -1;
+
   // Paso actual del flujo, para el indicador de progreso.
   const pasoActual = !hoja ? 1 : !confirmado ? 2 : seleccionado === null ? 3 : 4;
 
@@ -131,6 +179,9 @@ export default function App() {
     setConfirmado(false);
     setSeleccionado(null);
     setEdiciones({});
+    setFiltros({});
+    setOrden(null);
+    setBusqueda("");
   }
 
   function manejarDatos(nuevo: LibroImportado, nombre: string) {
@@ -157,6 +208,25 @@ export default function App() {
 
   function seleccionar(indice: number) {
     if (indice >= 0 && indice < totalFilas) setSeleccionado(indice);
+  }
+
+  function cambiarFiltro(columna: string, filtro: FiltroCampo | null) {
+    const siguiente = { ...filtros };
+    if (filtro) siguiente[columna] = filtro;
+    else delete siguiente[columna];
+    setFiltros(siguiente);
+  }
+
+  // Cada clic en un encabezado rota: ascendente -> descendente -> sin orden.
+  function ordenarPor(columna: string) {
+    if (orden?.columna !== columna) setOrden({ columna, direccion: "asc" });
+    else if (orden.direccion === "asc") setOrden({ columna, direccion: "desc" });
+    else setOrden(null);
+  }
+
+  // Filas a exportar: las filtradas (en su orden) o todas.
+  function filasAExportar(soloFiltrados: boolean): Registro[] {
+    return soloFiltrados ? indicesFiltrados.map((i) => registros[i]) : registros;
   }
 
   // Guarda la edición de un valor. Si la fila vuelve a ser igual a la del
@@ -198,6 +268,9 @@ export default function App() {
     setConfirmado(false);
     setSeleccionado(null);
     setEdiciones({});
+    setFiltros({});
+    setOrden(null);
+    setBusqueda("");
   }
 
   return (
@@ -245,11 +318,31 @@ export default function App() {
         <RecordTable
           campos={camposVisibles}
           registros={registros}
+          indices={indicesFiltrados}
           editadas={editadas}
           indiceSeleccionado={seleccionado}
           onSeleccionar={seleccionar}
-          onDescargarCSV={() => descargarCSV(nombreArchivo, camposVisibles, registros)}
-          onDescargarExcel={() => descargarExcel(nombreArchivo, hoja.nombre, camposVisibles, registros)}
+          busqueda={busqueda}
+          onBuscar={setBusqueda}
+          filtros={filtros}
+          panelFiltros={
+            <RecordFilters
+              campos={camposFiltrables}
+              excluidos={camposSensibles}
+              registros={registros}
+              columnasLista={columnasLista}
+              filtros={filtros}
+              onCambiar={cambiarFiltro}
+              onLimpiar={() => setFiltros({})}
+            />
+          }
+          orden={orden}
+          ordenables={new Set(camposFiltrables.map((c) => c.columna))}
+          onOrdenar={ordenarPor}
+          onDescargarCSV={(solo) => descargarCSV(nombreArchivo, camposVisibles, filasAExportar(solo))}
+          onDescargarExcel={(solo) =>
+            descargarExcel(nombreArchivo, hoja.nombre, camposVisibles, filasAExportar(solo))
+          }
         />
       )}
 
@@ -263,8 +356,21 @@ export default function App() {
           total={totalFilas}
           onCambiar={cambiarValor}
           onRestaurar={restaurarRegistro}
-          onAnterior={() => seleccionar(seleccionado - 1)}
-          onSiguiente={() => seleccionar(seleccionado + 1)}
+          // Si la fila elegida quedó fuera de los filtros, se navega por número de fila.
+          onAnterior={
+            posicion > 0
+              ? () => seleccionar(indicesFiltrados[posicion - 1])
+              : posicion === -1 && seleccionado > 0
+                ? () => seleccionar(seleccionado - 1)
+                : null
+          }
+          onSiguiente={
+            posicion >= 0 && posicion < indicesFiltrados.length - 1
+              ? () => seleccionar(indicesFiltrados[posicion + 1])
+              : posicion === -1 && seleccionado < totalFilas - 1
+                ? () => seleccionar(seleccionado + 1)
+                : null
+          }
         />
       )}
 

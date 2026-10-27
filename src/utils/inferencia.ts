@@ -92,6 +92,30 @@ export function inferirCampos(hoja: Hoja): CampoDinamico[] {
   });
 }
 
+// Palabras que indican datos personales sensibles (protegidos contra la
+// discriminación en selección de personal). Se comparan por palabra
+// completa para no confundir, por ejemplo, "antigüedad" con "edad".
+const PALABRAS_SENSIBLES = [
+  "raza", "race", "etnia", "etnico", "etnica", "ethnicity", "nacionalidad", "nationality",
+  "religion", "genero", "gender", "sexo", "sex", "edad", "age", "nacimiento", "birth",
+  "civil", "discapacidad", "disability", "orientacion", "origen",
+];
+
+/**
+ * Indica si el nombre de la columna sugiere un dato personal sensible
+ * (raza, origen, religión, género, edad, etc.). Esas columnas no se
+ * ofrecen para filtrar ni ordenar.
+ */
+export function esColumnaSensible(columna: string): boolean {
+  const palabras = columna
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  return palabras.some((p) => PALABRAS_SENSIBLES.includes(p));
+}
+
 // Indica si la mayoría de los valores tienen varias palabras (ej: "Teclado
 // mecánico"), a diferencia de códigos como "P-001".
 function valoresDeVariasPalabras(hoja: Hoja, columna: string): boolean {

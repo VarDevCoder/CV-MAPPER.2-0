@@ -1,8 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import type { KeyboardEvent } from "react";
-import { Check, ChevronLeft, ChevronRight, Download, PencilLine, Search } from "lucide-react";
-import type { CampoDinamico, Registro } from "../types";
-import { normalizar } from "../utils/inferencia";
+import { useEffect, useState } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  PencilLine,
+  Search,
+} from "lucide-react";
+import type { CampoDinamico, Filtros, Orden, Registro } from "../types";
 import { errorDeCampo } from "../utils/validacion";
 
 interface Props {
@@ -10,53 +19,71 @@ interface Props {
   campos: CampoDinamico[];
   // Registros con las ediciones ya aplicadas.
   registros: Registro[];
+  // Índices que pasan el buscador y los filtros, ya ordenados.
+  indices: number[];
   // Índices de las filas que tienen ediciones.
   editadas: Set<number>;
   indiceSeleccionado: number | null;
   onSeleccionar: (indice: number) => void;
-  onDescargarCSV: () => void;
-  onDescargarExcel: () => void;
+  busqueda: string;
+  onBuscar: (texto: string) => void;
+  filtros: Filtros;
+  // Panel de filtros (se muestra debajo del buscador).
+  panelFiltros: ReactNode;
+  orden: Orden | null;
+  // Columnas por las que se puede ordenar (las no sensibles).
+  ordenables: Set<string>;
+  onOrdenar: (columna: string) => void;
+  // soloFiltrados = exportar solo las filas que se ven (en su orden).
+  onDescargarCSV: (soloFiltrados: boolean) => void;
+  onDescargarExcel: (soloFiltrados: boolean) => void;
 }
 
 const FILAS_POR_PAGINA = 25;
 
 /**
- * Tabla de registros generada con los campos visibles: buscador sobre
- * todas las columnas, paginación, marca de filas editadas y selección de
+ * Tabla de registros generada con los campos visibles: buscador, filtros,
+ * orden por columna, paginación, marca de filas editadas y selección de
  * fila con clic o teclado.
  */
 export function RecordTable({
   campos,
   registros,
+  indices,
   editadas,
   indiceSeleccionado,
   onSeleccionar,
+  busqueda,
+  onBuscar,
+  filtros,
+  panelFiltros,
+  orden,
+  ordenables,
+  onOrdenar,
   onDescargarCSV,
   onDescargarExcel,
 }: Props) {
-  const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(0);
+  const [soloFiltrados, setSoloFiltrados] = useState(true);
 
-  // Índices de las filas que coinciden con la búsqueda (sin acentos).
-  const filtrados = useMemo(() => {
-    const termino = normalizar(busqueda);
-    const indices = registros.map((_, i) => i);
-    if (termino === "") return indices;
-    return indices.filter((i) =>
-      campos.some((c) => normalizar(registros[i][c.columna] ?? "").includes(termino))
-    );
-  }, [busqueda, registros, campos]);
+  const hayFiltrado = indices.length !== registros.length;
+  const exportarFiltrados = hayFiltrado && soloFiltrados;
 
-  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / FILAS_POR_PAGINA));
+  const totalPaginas = Math.max(1, Math.ceil(indices.length / FILAS_POR_PAGINA));
   const paginaActual = Math.min(pagina, totalPaginas - 1);
   const desde = paginaActual * FILAS_POR_PAGINA;
-  const visiblesEnPagina = filtrados.slice(desde, desde + FILAS_POR_PAGINA);
+  const visiblesEnPagina = indices.slice(desde, desde + FILAS_POR_PAGINA);
+
+  // Al cambiar la búsqueda, los filtros o el orden, volvemos a la página 1.
+  useEffect(() => {
+    setPagina(0);
+  }, [busqueda, filtros, orden]);
 
   // Si la fila elegida cambia (por ejemplo con Anterior/Siguiente del
   // formulario), saltamos a la página que la contiene.
   useEffect(() => {
     if (indiceSeleccionado === null) return;
-    const posicion = filtrados.indexOf(indiceSeleccionado);
+    const posicion = indices.indexOf(indiceSeleccionado);
     if (posicion >= 0) setPagina(Math.floor(posicion / FILAS_POR_PAGINA));
     // Solo reaccionamos al cambio de selección, no a cada búsqueda.
   }, [indiceSeleccionado]);
@@ -77,8 +104,9 @@ export function RecordTable({
           </span>{" "}
           Tabla de registros
         </h2>
-        <span className="contador">
-          {registros.length} filas · {editadas.size} editada{editadas.size === 1 ? "" : "s"}
+        <span className={`contador${hayFiltrado ? " contador-ok" : ""}`}>
+          {hayFiltrado ? `${indices.length} de ${registros.length} filas` : `${registros.length} filas`} ·{" "}
+          {editadas.size} editada{editadas.size === 1 ? "" : "s"}
         </span>
       </div>
 
@@ -90,31 +118,64 @@ export function RecordTable({
             placeholder="Buscar en todas las columnas…"
             aria-label="Buscar registros"
             value={busqueda}
-            onChange={(e) => {
-              setBusqueda(e.target.value);
-              setPagina(0);
-            }}
+            onChange={(e) => onBuscar(e.target.value)}
           />
         </div>
-        <button type="button" className="boton-secundario" onClick={onDescargarCSV}>
+        <button type="button" className="boton-secundario" onClick={() => onDescargarCSV(exportarFiltrados)}>
           <Download size={16} /> Descargar CSV
         </button>
-        <button type="button" className="boton-secundario" onClick={onDescargarExcel}>
+        <button type="button" className="boton-secundario" onClick={() => onDescargarExcel(exportarFiltrados)}>
           <Download size={16} /> Descargar Excel
         </button>
       </div>
 
-      {filtrados.length === 0 ? (
-        <p className="ayuda vacio">Ningún registro coincide con “{busqueda}”.</p>
+      {hayFiltrado && (
+        <label className="opcion-exportar">
+          <input
+            type="checkbox"
+            checked={soloFiltrados}
+            onChange={(e) => setSoloFiltrados(e.target.checked)}
+          />
+          Exportar solo las {indices.length} filas filtradas (si no, se exportan las {registros.length})
+        </label>
+      )}
+
+      {panelFiltros}
+
+      {indices.length === 0 ? (
+        <p className="ayuda vacio">Ningún registro coincide con la búsqueda y los filtros.</p>
       ) : (
         <div className="tabla-scroll">
           <table className="tabla-registros">
             <thead>
               <tr>
                 <th className="col-num">#</th>
-                {campos.map((c) => (
-                  <th key={c.columna}>{c.etiqueta}</th>
-                ))}
+                {campos.map((c) => {
+                  const activo = orden?.columna === c.columna ? orden.direccion : null;
+                  if (!ordenables.has(c.columna)) return <th key={c.columna}>{c.etiqueta}</th>;
+                  return (
+                    <th
+                      key={c.columna}
+                      aria-sort={activo === "asc" ? "ascending" : activo === "desc" ? "descending" : "none"}
+                    >
+                      <button
+                        type="button"
+                        className={`th-orden${activo ? " th-orden-activo" : ""}`}
+                        title="Ordenar por esta columna"
+                        onClick={() => onOrdenar(c.columna)}
+                      >
+                        {c.etiqueta}
+                        {activo === "asc" ? (
+                          <ArrowUp size={14} />
+                        ) : activo === "desc" ? (
+                          <ArrowDown size={14} />
+                        ) : (
+                          <ArrowUpDown size={14} className="th-orden-icono" />
+                        )}
+                      </button>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -161,10 +222,10 @@ export function RecordTable({
         </div>
       )}
 
-      {filtrados.length > 0 && (
+      {indices.length > 0 && (
         <div className="paginacion">
           <span className="ayuda">
-            Mostrando {desde + 1}–{desde + visiblesEnPagina.length} de {filtrados.length}
+            Mostrando {desde + 1}–{desde + visiblesEnPagina.length} de {indices.length}
           </span>
           <div className="paginacion-botones">
             <button

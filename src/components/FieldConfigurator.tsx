@@ -1,5 +1,6 @@
-import { ArrowRight, Check, Eye, EyeOff, Pencil } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, Pencil, ShieldAlert } from "lucide-react";
 import type { CampoDinamico, Hoja, TipoCampo } from "../types";
+import { esColumnaSensible } from "../utils/inferencia";
 
 interface Props {
   hoja: Hoja;
@@ -46,6 +47,7 @@ export function FieldConfigurator({
   const visibles = campos.filter((c) => c.visible);
   const etiquetasVacias = campos.filter((c) => c.etiqueta.trim() === "").length;
   const puedeConfirmar = visibles.length > 0 && etiquetasVacias === 0;
+  const sensibles = campos.filter((c) => esColumnaSensible(c.columna));
 
   // Vista resumida una vez confirmada la configuración.
   if (confirmado) {
@@ -94,6 +96,18 @@ export function FieldConfigurator({
         Cada columna del archivo es un campo. Elegí cuáles mostrar, cómo se llaman
         y qué tipo de dato tienen (el tipo se infirió de los valores).
       </p>
+
+      {sensibles.length > 0 && (
+        <p className="alerta alerta-aviso con-icono" role="note">
+          <ShieldAlert size={18} />
+          <span>
+            {sensibles.map((c) => `"${c.columna}"`).join(", ")}{" "}
+            {sensibles.length === 1 ? "parece un dato personal sensible" : "parecen datos personales sensibles"}{" "}
+            (raza, origen, religión, género, edad…). No se ofrecen para filtrar ni ordenar; si
+            no los necesitás, ocultalos.
+          </span>
+        </p>
+      )}
 
       <div className="acciones acciones-compactas">
         <button type="button" className="boton-secundario" onClick={() => onCambiarTodos(true)}>
