@@ -92,12 +92,22 @@ export function inferirCampos(hoja: Hoja): CampoDinamico[] {
   });
 }
 
+// Indica si la mayoría de los valores tienen varias palabras (ej: "Teclado
+// mecánico"), a diferencia de códigos como "P-001".
+function valoresDeVariasPalabras(hoja: Hoja, columna: string): boolean {
+  const valores = hoja.filas.map((f) => (f[columna] ?? "").trim()).filter((v) => v !== "");
+  if (valores.length === 0) return false;
+  return valores.filter((v) => /\p{L}\s+\p{L}/u.test(v)).length / valores.length >= 0.5;
+}
+
 /**
  * Elige la columna que da título a la vista previa del registro:
- * primero una de nombre, luego una de título y, si no hay, la primera
- * de texto visible. Devuelve null si no hay ninguna de texto visible.
+ * primero una de nombre, luego una de título; si no hay, la primera de
+ * texto visible con valores de varias palabras (según los datos de la
+ * hoja) y, como último recurso, la primera de texto visible.
+ * Devuelve null si no hay ninguna de texto visible.
  */
-export function columnaTitulo(campos: CampoDinamico[]): string | null {
+export function columnaTitulo(campos: CampoDinamico[], hoja?: Hoja): string | null {
   const deTexto = campos.filter((c) => c.visible && c.tipo === "texto");
   const coincide = (c: CampoDinamico, palabras: string[]) =>
     contieneAlguna(normalizar(c.columna), palabras) ||
@@ -106,6 +116,7 @@ export function columnaTitulo(campos: CampoDinamico[]): string | null {
   const elegido =
     deTexto.find((c) => coincide(c, PALABRAS_NOMBRE)) ??
     deTexto.find((c) => coincide(c, PALABRAS_TITULO)) ??
+    (hoja ? deTexto.find((c) => valoresDeVariasPalabras(hoja, c.columna)) : undefined) ??
     deTexto[0];
   return elegido ? elegido.columna : null;
 }

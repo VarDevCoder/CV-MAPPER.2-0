@@ -256,6 +256,7 @@ export default function App() {
       {hoja && confirmado && camposVisibles.length > 0 && seleccionado !== null && (
         <RecordForm
           campos={camposVisibles}
+          hoja={hoja}
           registro={registros[seleccionado]}
           original={hoja.filas[seleccionado]}
           indice={seleccionado}

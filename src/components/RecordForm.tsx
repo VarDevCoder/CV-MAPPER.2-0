@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, PencilLine, RotateCcw } from "lucide-react";
-import type { CampoDinamico, Registro } from "../types";
+import type { CampoDinamico, Hoja, Registro } from "../types";
 import { errorDeCampo, contarErrores } from "../utils/validacion";
 import { columnaTitulo } from "../utils/inferencia";
 import { iniciales, listaHabilidades, formatearNumero } from "../utils/formato";
@@ -7,6 +7,8 @@ import { iniciales, listaHabilidades, formatearNumero } from "../utils/formato";
 interface Props {
   // Solo los campos visibles, en orden.
   campos: CampoDinamico[];
+  // Hoja en uso: sus datos ayudan a elegir la columna del título.
+  hoja: Hoja;
   // Valores actuales (con ediciones) y valores tal como vienen del archivo.
   registro: Registro;
   original: Registro;
@@ -33,6 +35,7 @@ function ayudaDeTipo(campo: CampoDinamico): string {
  */
 export function RecordForm({
   campos,
+  hoja,
   registro,
   original,
   indice,
@@ -47,7 +50,7 @@ export function RecordForm({
   const editado = campos.some((c) => valorDe(c) !== (original[c.columna] ?? ""));
 
   // Vista previa: título, chips (valores con comas) y el resto en una lista.
-  const colTitulo = columnaTitulo(campos);
+  const colTitulo = columnaTitulo(campos, hoja);
   const titulo = colTitulo ? (registro[colTitulo] ?? "").trim() : "";
   const resto = campos.filter((c) => c.columna !== colTitulo);
   const conChips = resto.filter((c) => c.tipo === "texto" && listaHabilidades(valorDe(c)).length > 1);
