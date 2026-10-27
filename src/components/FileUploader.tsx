@@ -3,6 +3,9 @@ import type { ChangeEvent, DragEvent } from "react";
 import { parsearArchivo } from "../utils/fileParser";
 import type { DatosImportados } from "../types";
 
+// Excel de candidatos incluido en public/ para probar la app sin subir nada.
+const DATASET_EJEMPLO = "dataset_candidatos_cv.xlsx";
+
 interface Props {
   // Se llama cuando un archivo se parsea correctamente.
   onDatos: (datos: DatosImportados, nombreArchivo: string) => void;
@@ -36,6 +39,22 @@ export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
       setCargando(false);
       // Reseteamos el input para permitir resubir el mismo archivo.
       if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  // Descarga el Excel de ejemplo publicado junto a la app (carpeta public/)
+  // y lo procesa igual que un archivo subido por el usuario.
+  async function cargarEjemplo() {
+    setError("");
+    try {
+      const respuesta = await fetch(`/${DATASET_EJEMPLO}`);
+      if (!respuesta.ok) {
+        throw new Error(`No se pudo descargar el dataset de ejemplo (HTTP ${respuesta.status}).`);
+      }
+      const blob = await respuesta.blob();
+      await procesar(new File([blob], DATASET_EJEMPLO));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cargar el dataset de ejemplo.");
     }
   }
 
@@ -102,6 +121,18 @@ export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
           </>
         )}
       </label>
+
+      <div className="acciones">
+        <button
+          type="button"
+          className="boton-secundario"
+          disabled={cargando}
+          onClick={() => void cargarEjemplo()}
+        >
+          📊 Usar dataset de ejemplo
+        </button>
+        <span className="ayuda">{DATASET_EJEMPLO} · 10 candidatos</span>
+      </div>
 
       {error && (
         <p className="alerta alerta-error" role="alert">

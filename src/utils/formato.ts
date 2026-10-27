@@ -9,10 +9,11 @@ export function iniciales(nombre: string): string {
   return (primera + ultima).toUpperCase();
 }
 
-// Separa un texto de habilidades en una lista (por coma, punto y coma o "/").
+// Separa un texto de habilidades en una lista (por coma o punto y coma).
+// No se usa "/" para no partir habilidades como "CI/CD".
 export function listaHabilidades(texto: string): string[] {
   return texto
-    .split(/[,;/]/)
+    .split(/[,;]/)
     .map((h) => h.trim())
     .filter(Boolean);
 }

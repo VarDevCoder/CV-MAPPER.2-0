@@ -1,11 +1,11 @@
-Nombre_Completo;Puesto;Anios_Exp;Skills;Mail;Sueldo_Pretendido
-Ana María Giménez;Desarrolladora Frontend;5;React, TypeScript, CSS;ana.gimenez@mail.com;4500000
-Carlos Rodríguez;Analista de Datos;3;Python, Pandas, SQL;carlos.rodriguez@mail.com;3800000
-Lucía Fernández;Ingeniera de Machine Learning;6;Scikit-Learn, TensorFlow, Python;lucia.fernandez@mail.com;6200000
-Jorge Benítez;Desarrollador Backend;4;Node.js, PostgreSQL, Docker;jorge.benitez@mail.com;4800000
-María José Acosta;Diseñadora UX/UI;7;Figma, Adobe XD, Investigación;mariajose.acosta@mail.com;4200000
-Diego Villalba;DevOps Engineer;8;Kubernetes, AWS, Terraform;diego.villalba@mail.com;7000000
-Sofía Ramírez;Analista de Sistemas;2;Java, Spring, MySQL;sofia.ramirez@mail.com;3200000
-Pedro Cáceres;Científico de Datos;5;Python, PyTorch, Estadística;pedro.caceres@mail.com;5900000
-Valeria Ortiz;QA Automation;3;Selenium, Cypress, Jest;valeria.ortiz@mail.com;3600000
-Martín Duarte;Arquitecto de Software;10;Microservicios, Java, Kafka;martin.duarte@mail.com;8500000
+id_candidato;nombre_completo;titulo_profesional;anos_experiencia;habilidades_principales;correo_electronico;salario_esperado_usd
+CAN-001;Maria Gonzalez Benitez;Ingeniera de Software Senior;6;React, TypeScript, Node.js, Python;maria.gonzalez@example.com;3200
+CAN-002;Juan Carlos Duarte;Analista de Datos / BI;4;SQL, PowerBI, Python, Excel;juancarlos.duarte@example.com;2400
+CAN-003;Ana Sofia Martinez;Arquitecta de Soluciones Cloud;9;AWS, Docker, Kubernetes, Terraform;ana.sofia@example.com;4500
+CAN-004;Lucas Gabriel Riquelme;Desarrollador Full Stack;3;JavaScript, React, Express, MongoDB;lucas.riquelme@example.com;1800
+CAN-005;Valeria Aquino Acosta;Data Scientist Jr.;2;Python, Pandas, Scikit-Learn, SQL;valeria.aquino@example.com;2100
+CAN-006;Diego Armando Vera;Ingeniero DevOps;5;Docker, Kubernetes, Linux, CI/CD;diego.vera@example.com;3000
+CAN-007;Carmen Rosa Villalba;Gerente de Proyectos IT;8;Scrum, Agile, Jira, PMP;carmen.villalba@example.com;3800
+CAN-008;Rodrigo Javier Morinigo;Desarrollador Backend;4;Java, SpringBoot, PostgreSQL;rodrigo.morinigo@example.com;2600
+CAN-009;Patricia Elizabeth Ortiz;Especialista Ciberseguridad;7;Ethical Hacking, Redes, SIEM;patricia.ortiz@example.com;3500
+CAN-010;Fernando Jose Ramirez;Frontend Engineer;3;React, Tailwind, TypeScript;fernando.ramirez@example.com;1900

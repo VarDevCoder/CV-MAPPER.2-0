@@ -55,10 +55,30 @@ npm run preview
 
 ## Dataset de ejemplo
 
-`dataset_candidatos_cv.csv` incluye 10 filas. **A propósito** sus columnas NO
-coinciden con los nombres de los campos del CV (`Nombre_Completo`, `Puesto`,
-`Anios_Exp`, `Skills`, `Mail`, `Sueldo_Pretendido`), para probar el mapeo y la
-autosugerencia. Usa `;` como separador, que PapaParse detecta solo.
+El dataset oficial es `dataset_candidatos_cv.xlsx` (10 candidatos, hoja
+"Candidatos CV"), con estas columnas:
+
+| Columna del Excel | Campo del CV |
+|---|---|
+| `id_candidato` | — (no se usa) |
+| `nombre_completo` | Nombre completo |
+| `titulo_profesional` | Título profesional |
+| `anos_experiencia` | Años de experiencia |
+| `habilidades_principales` | Habilidades |
+| `correo_electronico` | Correo |
+| `salario_esperado_usd` | Salario esperado (USD) |
+
+Hay tres formas de usarlo:
+
+- Botón **"Usar dataset de ejemplo"** de la app: carga la copia que está en
+  `public/dataset_candidatos_cv.xlsx`.
+- Subir `dataset_candidatos_cv.xlsx` desde la raíz del proyecto.
+- Subir `dataset_candidatos_cv.csv`: mismos datos exportados a CSV con `;` como
+  separador, que PapaParse detecta solo.
+
+Los nombres de columna no coinciden exactamente con los campos del CV, así que
+sirven para probar el mapeo. La autosugerencia asocia los 6 campos y deja
+`id_candidato` sin usar.
 
 ## Estructura del proyecto
 
@@ -69,7 +89,11 @@ cv-mapper/
 ├── tsconfig.json
 ├── tsconfig.node.json
 ├── vite.config.ts
-├── dataset_candidatos_cv.csv
+├── dataset_candidatos_cv.xlsx   # Dataset oficial de candidatos
+├── dataset_candidatos_cv.csv    # Mismos datos en CSV
+├── public/
+│   └── dataset_candidatos_cv.xlsx   # Copia servida para el botón de ejemplo
+├── pruebas/                     # Archivos para probar casos y errores
 ├── README.md
 └── src/
     ├── main.tsx
