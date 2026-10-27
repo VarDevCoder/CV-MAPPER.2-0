@@ -264,10 +264,6 @@ h4 {
   color: var(--primario);
 }
 
-.archivo-icono {
-  font-size: 1.6rem;
-}
-
 /* --- Alertas --- */
 .alerta {
   margin: 12px 0 0;
@@ -282,104 +278,102 @@ h4 {
   border: 1px solid var(--error);
 }
 
-/* --- Mapeo de columnas --- */
-.lista-mapeo {
+/* --- Selector de hoja --- */
+.selector-hoja {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 14px 0;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 0.9rem;
 }
 
-.fila-mapeo {
-  display: grid;
-  grid-template-columns: 200px 24px 1fr;
-  align-items: start;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--borde);
-  border-radius: 10px;
+.selector-hoja label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.selector-hoja select {
+  max-width: 420px;
+}
+
+/* --- Configuración de campos --- */
+.acciones-compactas {
+  margin: 10px 0;
+}
+
+.acciones-compactas button {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+}
+
+.tabla-config td {
+  vertical-align: middle;
+}
+
+.tabla-config input[type="text"] {
+  min-width: 180px;
+  padding: 6px 9px;
+  font-size: 0.85rem;
+}
+
+.tabla-config select {
+  min-width: 110px;
+  padding: 6px 9px;
+  font-size: 0.85rem;
+}
+
+.tabla-config input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primario);
+}
+
+.celda-centro {
+  text-align: center;
+}
+
+.celda-ejemplo {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--texto-suave);
+}
+
+.fila-oculta td {
   background: var(--superficie-2);
 }
 
-.fila-ok {
-  border-left: 4px solid var(--ok);
+.fila-oculta .columna-tag,
+.fila-oculta .celda-ejemplo {
+  opacity: 0.55;
 }
 
-.fila-vacio {
-  border-left: 4px solid var(--borde);
-}
-
-.fila-duplicado {
-  border-left: 4px solid var(--aviso);
-  background: var(--aviso-suave);
-}
-
-.fila-mapeo-campo {
-  font-weight: 600;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 8px;
-}
-
-.estado-icono {
-  width: 18px;
-  text-align: center;
-  font-weight: 700;
-}
-
-.fila-ok .estado-icono {
-  color: var(--ok);
-}
-
-.fila-duplicado .estado-icono {
-  color: var(--aviso);
-}
-
-.fila-vacio .estado-icono {
-  color: var(--texto-suave);
-}
-
-.flecha {
-  color: var(--texto-suave);
-  padding-top: 8px;
-  text-align: center;
-}
-
-.fila-mapeo-control {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.ejemplo {
-  font-size: 0.8rem;
-  color: var(--texto-suave);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.resumen-mapeo {
+.resumen-campos {
   list-style: none;
   padding: 0;
   margin: 8px 0 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-.resumen-mapeo li {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.resumen-mapeo .ayuda {
-  margin: 0;
-  font-size: 0.78rem;
+.resumen-campos li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--superficie-2);
+  font-size: 0.85rem;
+}
+
+.tipo-tag {
+  font-size: 0.72rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--primario-suave);
+  color: var(--primario);
 }
 
 .columna-tag {
@@ -434,58 +428,84 @@ tr:last-child td {
   border-bottom: none;
 }
 
-/* --- Candidatos --- */
-.buscador {
+/* --- Tabla de registros --- */
+.barra-tabla {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
   margin: 10px 0 12px;
 }
 
-.lista-candidatos {
-  list-style: none;
-  padding: 0;
+.barra-tabla .buscador {
+  flex: 1 1 240px;
   margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 8px;
-  max-height: 320px;
-  overflow-y: auto;
 }
 
-.candidato {
-  width: 100%;
+.tabla-registros td {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabla-registros tbody tr {
+  cursor: pointer;
+}
+
+.tabla-registros tbody tr:hover td {
+  background: var(--superficie-2);
+}
+
+.tabla-registros tbody tr:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: -2px;
+}
+
+.col-num {
+  width: 1%;
+  color: var(--texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.fila-editada td:first-child {
+  box-shadow: inset 3px 0 0 var(--aviso);
+}
+
+.fila-editada .punto-editado {
+  color: var(--aviso);
+}
+
+.tabla-registros tbody tr.fila-seleccionada td {
+  background: var(--primario-suave);
+}
+
+.fila-seleccionada td:first-child {
+  box-shadow: inset 3px 0 0 var(--primario);
+}
+
+.celda-error {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.paginacion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.paginacion-botones {
   display: flex;
   align-items: center;
   gap: 10px;
-  text-align: left;
-  padding: 10px 12px;
-  background: var(--superficie-2);
-  border: 1px solid var(--borde);
-  border-radius: 10px;
-  color: var(--texto);
-  font-weight: 400;
 }
 
-.candidato:hover {
-  border-color: var(--primario);
-}
-
-.candidato-activo {
-  border-color: var(--primario);
-  background: var(--primario-suave);
-  box-shadow: inset 0 0 0 1px var(--primario);
-}
-
-.candidato-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.candidato-info strong,
-.candidato-info .ayuda {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0;
+.paginacion-botones button {
+  padding: 6px 12px;
+  font-size: 0.82rem;
 }
 
 .avatar {
@@ -590,6 +610,15 @@ tr:last-child td {
   gap: 6px 12px;
   margin: 14px 0;
   font-size: 0.875rem;
+}
+
+/* Cada par dt/dd va envuelto en un div; lo "aplanamos" para la grilla. */
+.cv-dato {
+  display: contents;
+}
+
+.cv-chips + .cv-chips {
+  margin-top: 12px;
 }
 
 .cv-datos dt {
@@ -754,9 +783,6 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .resumen-mapeo {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 @media (max-width: 560px) {
@@ -773,24 +799,12 @@ button:disabled {
     display: none;
   }
 
-  .fila-mapeo {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  .flecha {
-    display: none;
-  }
-
-  .fila-mapeo-campo {
-    padding-top: 0;
-  }
-
   .formulario {
     grid-template-columns: 1fr;
   }
 
-  .resumen-mapeo {
-    grid-template-columns: 1fr;
+  .selector-hoja {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

@@ -1,37 +1,64 @@
-# Importador de CVs con mapeo de columnas
+# Importador de tablas con campos dinámicos
 
-Aplicación web (sin backend) que importa un archivo de candidatos (`.csv` o
-`.xlsx`), permite **mapear las columnas del archivo con los campos de un
-formulario de CV**, rellena el formulario con el candidato elegido y guarda
-todo en `localStorage`.
+Aplicación web (sin backend) que importa un archivo `.xlsx` o `.csv` y **genera
+los campos a partir de sus columnas**: cada columna se convierte en un campo
+que se puede configurar, ver en una tabla, editar en un formulario y exportar.
+No hay campos fijos, así que sirve para cualquier tabla. Todo se guarda en
+`localStorage`.
 
 Stack: **Vite + React 18 + TypeScript**, PapaParse (CSV) y SheetJS/xlsx (Excel).
+Sin librerías de UI.
 
-## Campos del CV
+## Flujo
 
-Nombre completo · Título profesional · Años de experiencia · Habilidades ·
-Correo · Salario esperado.
+1. **Subir archivo**: `.xlsx` o `.csv` (separador `,` o `;` autodetectado,
+   UTF-8), arrastrando o eligiendo el archivo. El botón *Usar dataset de
+   ejemplo* carga `public/dataset_candidatos_cv.xlsx`. Si el Excel tiene
+   varias hojas con datos, aparece un selector de hoja.
+2. **Configurar campos**: una fila por columna con *Mostrar*, nombre original,
+   etiqueta editable, tipo (texto / número / correo), *No negativo* (solo
+   números) y un valor de ejemplo. El tipo se infiere de los valores y del
+   nombre de la columna. *Confirmar* se deshabilita si no hay campos visibles
+   o si alguna etiqueta está vacía. Incluye una vista previa de las primeras
+   filas.
+3. **Tabla de registros**: columnas visibles, buscador en todas ellas,
+   paginación de 25 filas, marca de filas editadas, celdas inválidas en rojo,
+   selección con clic o teclado (Enter / Espacio). *Descargar CSV* y
+   *Descargar Excel* exportan con las ediciones aplicadas y las etiquetas como
+   encabezados.
+4. **Formulario del registro**: un input por campo visible según su tipo,
+   tarjeta de vista previa, indicadores de *Editado* y de errores,
+   *Restaurar valores del archivo* y *Anterior* / *Siguiente*.
 
-## Funcionalidades
+## Inferencia de tipos
 
-1. **Ingesta**: subida de `.csv` (separador `,` o `;` autodetectado, UTF-8) o
-   `.xlsx`.
-2. **Column Mapper**: un `<select>` por campo con las columnas del archivo.
-   Autosugerencia por similitud de nombre. El botón *Confirmar mapeo* queda
-   deshabilitado hasta mapear los 6 campos.
-3. **Carga dinámica**: selector de candidatos; al elegir uno, el formulario se
-   rellena y queda editable.
-4. **Persistencia**: datos importados, mapeo, candidato seleccionado y
-   ediciones del formulario se guardan en `localStorage` y se restauran al
-   recargar. Botón *Limpiar datos*.
-5. **Validaciones**: correo con formato válido; años y salario numéricos `>= 0`.
+- **Número**: al menos el 80 % de los valores no vacíos son numéricos, o el
+  50 % si el nombre sugiere número (años, experiencia, salario, sueldo, monto,
+  edad, precio, cantidad, total, importe).
+- **Correo**: mismo criterio con formato de correo (50 % si el nombre contiene
+  *mail* o *correo*).
+- **Texto**: el resto.
+- *No negativo* se activa si el nombre sugiere número o si todos los valores
+  son `>= 0`.
 
-## Manejo de errores
+Los nombres se comparan sin acentos. La etiqueta inicial reemplaza `_` por
+espacios y pone la primera letra en mayúscula.
 
-- Archivo vacío o sin filas de datos.
-- Formato no soportado (distinto de `.csv` / `.xlsx`).
-- JSON corrupto en `localStorage` (el hook `useLocalStorage` cae al valor
-  inicial sin romper la app).
+## Validaciones
+
+- Correo: formato válido.
+- Número: número válido (punto decimal) y, con *No negativo*, `>= 0`.
+- Un valor vacío nunca es error.
+
+## Persistencia y manejo de errores
+
+- Se guardan con el prefijo `tablaapp.v2.`: archivo importado, nombre, hoja
+  activa, campos, confirmación, fila elegida y ediciones (por índice de fila).
+- Archivo vacío, sin filas de datos o con formato no soportado: mensaje claro.
+- JSON corrupto o inconsistente en `localStorage`: la app vuelve a inferir
+  los campos o descarta el dato sin romperse.
+- Al cambiar de archivo o de hoja se reinician campos, selección y ediciones
+  (si hay ediciones, se pide confirmación).
 
 ## Requisitos
 
@@ -55,30 +82,13 @@ npm run preview
 
 ## Dataset de ejemplo
 
-El dataset oficial es `dataset_candidatos_cv.xlsx` (10 candidatos, hoja
-"Candidatos CV"), con estas columnas:
+`dataset_candidatos_cv.xlsx` (10 filas, hoja "Candidatos CV"), con las columnas
+`id_candidato`, `nombre_completo`, `titulo_profesional`, `anos_experiencia`,
+`habilidades_principales`, `correo_electronico` y `salario_esperado_usd`.
+Está en la raíz y en `public/` (para el botón de ejemplo).
+`dataset_candidatos_cv.csv` tiene los mismos datos con `;` como separador.
 
-| Columna del Excel | Campo del CV |
-|---|---|
-| `id_candidato` | — (no se usa) |
-| `nombre_completo` | Nombre completo |
-| `titulo_profesional` | Título profesional |
-| `anos_experiencia` | Años de experiencia |
-| `habilidades_principales` | Habilidades |
-| `correo_electronico` | Correo |
-| `salario_esperado_usd` | Salario esperado (USD) |
-
-Hay tres formas de usarlo:
-
-- Botón **"Usar dataset de ejemplo"** de la app: carga la copia que está en
-  `public/dataset_candidatos_cv.xlsx`.
-- Subir `dataset_candidatos_cv.xlsx` desde la raíz del proyecto.
-- Subir `dataset_candidatos_cv.csv`: mismos datos exportados a CSV con `;` como
-  separador, que PapaParse detecta solo.
-
-Los nombres de columna no coinciden exactamente con los campos del CV, así que
-sirven para probar el mapeo. La autosugerencia asocia los 6 campos y deja
-`id_candidato` sin usar.
+En `pruebas/` hay archivos para cada caso (ver `pruebas/README.md`).
 
 ## Estructura del proyecto
 
@@ -86,28 +96,27 @@ sirven para probar el mapeo. La autosugerencia asocia los 6 campos y deja
 cv-mapper/
 ├── index.html
 ├── package.json
-├── tsconfig.json
-├── tsconfig.node.json
-├── vite.config.ts
-├── dataset_candidatos_cv.xlsx   # Dataset oficial de candidatos
-├── dataset_candidatos_cv.csv    # Mismos datos en CSV
+├── netlify.toml
 ├── public/
-│   └── dataset_candidatos_cv.xlsx   # Copia servida para el botón de ejemplo
+│   └── dataset_candidatos_cv.xlsx
 ├── pruebas/                     # Archivos para probar casos y errores
-├── README.md
 └── src/
     ├── main.tsx
-    ├── App.tsx              # Orquesta estado y flujo completo
+    ├── App.tsx                  # Estado persistido y flujo completo
     ├── index.css
-    ├── types.ts             # Tipos y constantes (campos del CV)
+    ├── types.ts                 # Modelo dinámico (campos, registros, hojas)
     ├── hooks/
     │   └── useLocalStorage.ts
     ├── utils/
-    │   ├── fileParser.ts    # PapaParse (CSV) + SheetJS (Excel)
-    │   └── mapping.ts       # Autosugerencia de mapeo por similitud
+    │   ├── fileParser.ts        # PapaParse (CSV) + SheetJS (Excel, todas las hojas)
+    │   ├── inferencia.ts        # Tipos y etiquetas a partir de las columnas
+    │   ├── validacion.ts        # Validación genérica por tipo
+    │   ├── exportar.ts          # Descarga CSV / Excel
+    │   └── formato.ts
     └── components/
+        ├── Stepper.tsx
         ├── FileUploader.tsx
-        ├── ColumnMapper.tsx
-        ├── CandidateSelector.tsx
-        └── CVForm.tsx
+        ├── FieldConfigurator.tsx
+        ├── RecordTable.tsx
+        └── RecordForm.tsx
 ```

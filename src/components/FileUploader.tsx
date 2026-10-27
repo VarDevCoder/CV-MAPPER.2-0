@@ -1,26 +1,29 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { parsearArchivo } from "../utils/fileParser";
-import type { DatosImportados } from "../types";
+import type { Hoja, LibroImportado } from "../types";
 
 // Excel de candidatos incluido en public/ para probar la app sin subir nada.
 const DATASET_EJEMPLO = "dataset_candidatos_cv.xlsx";
 
 interface Props {
   // Se llama cuando un archivo se parsea correctamente.
-  onDatos: (datos: DatosImportados, nombreArchivo: string) => void;
+  onDatos: (libro: LibroImportado, nombreArchivo: string) => void;
   // Nombre del archivo ya cargado ("" si no hay ninguno).
   nombreArchivo: string;
-  // Resumen del archivo cargado (columnas y filas), si existe.
-  resumen?: string;
+  // Hojas del archivo cargado y la que está en uso (para el selector).
+  hojas: Hoja[];
+  hojaActiva: number;
+  onCambiarHoja: (indice: number) => void;
 }
 
 /**
  * Componente de ingesta: zona para arrastrar y soltar o hacer clic y
  * elegir un archivo .csv o .xlsx. Delega el parseo en parsearArchivo y
- * muestra los errores de forma amigable.
+ * muestra los errores de forma amigable. Si el Excel tiene varias hojas,
+ * muestra un selector.
  */
-export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
+export function FileUploader({ onDatos, nombreArchivo, hojas, hojaActiva, onCambiarHoja }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string>("");
   const [cargando, setCargando] = useState(false);
@@ -30,8 +33,8 @@ export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
     setError("");
     setCargando(true);
     try {
-      const datos = await parsearArchivo(archivo);
-      onDatos(datos, archivo.name);
+      const libro = await parsearArchivo(archivo);
+      onDatos(libro, archivo.name);
     } catch (err) {
       // Archivo vacío, formato no soportado, sin filas, etc.
       setError(err instanceof Error ? err.message : "Error desconocido al leer el archivo.");
@@ -71,11 +74,17 @@ export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
   }
 
   const hayArchivo = nombreArchivo !== "";
+  const hoja = hojas[hojaActiva];
+  const resumen = hoja
+    ? `${hoja.encabezados.length} columnas, ${hoja.filas.length} filas` +
+      (hojas.length > 1 ? ` · ${hojas.length} hojas` : "")
+    : "";
 
   return (
     <section className="tarjeta">
       <h2>
-        <span className="num-seccion">1</span> Subir archivo de candidatos
+        <span className={`num-seccion${hayArchivo ? " hecho" : ""}`}>{hayArchivo ? "✓" : "1"}</span>{" "}
+        Subir archivo
       </h2>
 
       <label
@@ -99,10 +108,9 @@ export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
         />
 
         {cargando ? (
-          <span className="dropzone-texto">⏳ Procesando archivo…</span>
+          <span className="dropzone-texto">Procesando archivo…</span>
         ) : hayArchivo ? (
           <>
-            <span className="archivo-icono" aria-hidden="true">📄</span>
             <span className="dropzone-texto">
               <strong>{nombreArchivo}</strong>
               {resumen && <span className="ayuda"> · {resumen}</span>}
@@ -112,7 +120,12 @@ export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
           </>
         ) : (
           <>
-            <span className="dropzone-icono" aria-hidden="true">⬆</span>
+            <span className="dropzone-icono" aria-hidden="true">
+              {/* Flecha de subida dibujada con trazos (sin emojis). */}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 16V4M6 10l6-6 6 6M4 20h16" />
+              </svg>
+            </span>
             <span className="dropzone-texto">
               <strong>Arrastrá tu archivo acá</strong> o <u>hacé clic para elegirlo</u>
               <br />
@@ -122,6 +135,23 @@ export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
         )}
       </label>
 
+      {hojas.length > 1 && (
+        <div className="selector-hoja">
+          <label htmlFor="hoja-select">Hoja del archivo</label>
+          <select
+            id="hoja-select"
+            value={hojaActiva}
+            onChange={(e) => onCambiarHoja(Number(e.target.value))}
+          >
+            {hojas.map((h, i) => (
+              <option key={`${h.nombre}-${i}`} value={i}>
+                {h.nombre} ({h.filas.length} filas, {h.encabezados.length} columnas)
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="acciones">
         <button
           type="button"
@@ -129,14 +159,14 @@ export function FileUploader({ onDatos, nombreArchivo, resumen }: Props) {
           disabled={cargando}
           onClick={() => void cargarEjemplo()}
         >
-          📊 Usar dataset de ejemplo
+          Usar dataset de ejemplo
         </button>
         <span className="ayuda">{DATASET_EJEMPLO} · 10 candidatos</span>
       </div>
 
       {error && (
         <p className="alerta alerta-error" role="alert">
-          ⚠ {error}
+          {error}
         </p>
       )}
     </section>

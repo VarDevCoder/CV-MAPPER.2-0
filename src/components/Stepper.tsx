@@ -1,5 +1,5 @@
 // Nombres de los 4 pasos del flujo, en orden.
-const PASOS = ["Subir archivo", "Mapear columnas", "Elegir candidato", "Editar CV"];
+const PASOS = ["Subir archivo", "Configurar campos", "Tabla de registros", "Editar registro"];
 
 interface Props {
   // Paso actual (1 a 4). Los anteriores se muestran como completados.

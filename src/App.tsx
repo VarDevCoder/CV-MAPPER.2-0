@@ -1,121 +1,217 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Stepper } from "./components/Stepper";
 import { FileUploader } from "./components/FileUploader";
-import { ColumnMapper } from "./components/ColumnMapper";
-import { CandidateSelector } from "./components/CandidateSelector";
-import { CVForm } from "./components/CVForm";
+import { FieldConfigurator } from "./components/FieldConfigurator";
+import { RecordTable } from "./components/RecordTable";
+import { RecordForm } from "./components/RecordForm";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { autosugerirMapeo, filaACV } from "./utils/mapping";
-import { CV_VACIO, MAPEO_VACIO } from "./types";
-import type { DatosImportados, Mapeo, DatosCV, CampoCV } from "./types";
+import { inferirCampos } from "./utils/inferencia";
+import { descargarCSV, descargarExcel } from "./utils/exportar";
+import type { CampoDinamico, Ediciones, Hoja, LibroImportado, Registro } from "./types";
 
-// Claves de localStorage agrupadas en un solo lugar.
+// Claves de localStorage agrupadas en un solo lugar. El prefijo v2 evita
+// leer datos guardados por la versión anterior (campos fijos de CV).
 const CLAVES = {
-  datos: "cvmapper.datos",
-  nombreArchivo: "cvmapper.nombreArchivo",
-  mapeo: "cvmapper.mapeo",
-  confirmado: "cvmapper.confirmado",
-  seleccionado: "cvmapper.seleccionado",
-  formulario: "cvmapper.formulario",
+  libro: "tablaapp.v2.libro",
+  nombreArchivo: "tablaapp.v2.nombreArchivo",
+  hojaActiva: "tablaapp.v2.hojaActiva",
+  campos: "tablaapp.v2.campos",
+  confirmado: "tablaapp.v2.confirmado",
+  seleccionado: "tablaapp.v2.seleccionado",
+  ediciones: "tablaapp.v2.ediciones",
 };
+
+const TIPOS_VALIDOS = ["texto", "numero", "email"];
+
+// --- Defensas contra un localStorage inconsistente o editado a mano ---
+
+function esObjeto(valor: unknown): valor is Record<string, unknown> {
+  return typeof valor === "object" && valor !== null && !Array.isArray(valor);
+}
+
+// El libro sirve solo si tiene un array de hojas con encabezados y filas.
+function libroValido(valor: unknown): LibroImportado | null {
+  if (!esObjeto(valor) || !Array.isArray(valor.hojas) || valor.hojas.length === 0) return null;
+  const hojasOk = valor.hojas.every(
+    (h: unknown) =>
+      esObjeto(h) && typeof h.nombre === "string" && Array.isArray(h.encabezados) && Array.isArray(h.filas)
+  );
+  return hojasOk ? (valor as unknown as LibroImportado) : null;
+}
+
+// Los campos sirven solo si corresponden, en orden, a las columnas de la hoja.
+function camposCoinciden(campos: unknown, hoja: Hoja): campos is CampoDinamico[] {
+  return (
+    Array.isArray(campos) &&
+    campos.length === hoja.encabezados.length &&
+    campos.every(
+      (c: unknown, i) =>
+        esObjeto(c) &&
+        c.columna === hoja.encabezados[i] &&
+        typeof c.etiqueta === "string" &&
+        TIPOS_VALIDOS.includes(c.tipo as string) &&
+        typeof c.visible === "boolean" &&
+        typeof c.noNegativo === "boolean"
+    )
+  );
+}
 
 export default function App() {
   // --- Estado persistido en localStorage ---
-  const [datos, setDatos] = useLocalStorage<DatosImportados | null>(CLAVES.datos, null);
+  const [libroGuardado, setLibro] = useLocalStorage<LibroImportado | null>(CLAVES.libro, null);
   const [nombreArchivo, setNombreArchivo] = useLocalStorage<string>(CLAVES.nombreArchivo, "");
-  const [mapeo, setMapeo] = useLocalStorage<Mapeo>(CLAVES.mapeo, MAPEO_VACIO);
+  const [hojaGuardada, setHojaActiva] = useLocalStorage<number>(CLAVES.hojaActiva, 0);
+  const [camposGuardados, setCampos] = useLocalStorage<CampoDinamico[]>(CLAVES.campos, []);
   const [confirmado, setConfirmado] = useLocalStorage<boolean>(CLAVES.confirmado, false);
-  const [seleccionado, setSeleccionado] = useLocalStorage<number | null>(CLAVES.seleccionado, null);
-  const [formulario, setFormulario] = useLocalStorage<DatosCV>(CLAVES.formulario, CV_VACIO);
+  const [seleccionadoGuardado, setSeleccionado] = useLocalStorage<number | null>(
+    CLAVES.seleccionado,
+    null
+  );
+  const [edicionesGuardadas, setEdiciones] = useLocalStorage<Ediciones>(CLAVES.ediciones, {});
 
-  // Si hay datos pero el mapeo está completamente vacío, autosugerimos uno.
-  // Cubre el caso de recargar con datos importados sin mapeo previo.
+  // --- Valores saneados (nunca confiamos en lo que vino del storage) ---
+  const libro = libroValido(libroGuardado);
+  const hojas = libro ? libro.hojas : [];
+  const hojaActiva =
+    Number.isInteger(hojaGuardada) && hojaGuardada >= 0 && hojaGuardada < hojas.length ? hojaGuardada : 0;
+  const hoja: Hoja | null = hojas[hojaActiva] ?? null;
+
+  const coinciden = hoja !== null && camposCoinciden(camposGuardados, hoja);
+  const camposInferidos = useMemo(() => (hoja ? inferirCampos(hoja) : []), [hoja]);
+  const campos = coinciden ? camposGuardados : camposInferidos;
+  const camposVisibles = campos.filter((c) => c.visible);
+
+  const ediciones: Ediciones = esObjeto(edicionesGuardadas) ? edicionesGuardadas : {};
+  const totalFilas = hoja ? hoja.filas.length : 0;
+  const seleccionado =
+    typeof seleccionadoGuardado === "number" &&
+    Number.isInteger(seleccionadoGuardado) &&
+    seleccionadoGuardado >= 0 &&
+    seleccionadoGuardado < totalFilas
+      ? seleccionadoGuardado
+      : null;
+
+  // Si los campos guardados no corresponden a la hoja, persistimos los inferidos.
   useEffect(() => {
-    if (datos && Object.values(mapeo).every((v) => v === "")) {
-      setMapeo(autosugerirMapeo(datos.encabezados));
-    }
-  }, [datos, mapeo, setMapeo]);
+    if (hoja && !coinciden) setCampos(camposInferidos);
+  }, [hoja, coinciden, camposInferidos, setCampos]);
 
-  // Fila del candidato elegido (null si no hay o si el índice guardado
-  // ya no existe, por ejemplo con un localStorage inconsistente).
-  const filaElegida =
-    datos && seleccionado !== null ? (datos.filas[seleccionado] ?? null) : null;
-  const original = filaElegida ? filaACV(filaElegida, mapeo) : null;
+  // Valor mostrado de cada fila: la edición si existe, si no la del archivo.
+  function registroActual(indice: number): Registro {
+    const fila = hoja?.filas[indice] ?? {};
+    const editado = ediciones[String(indice)];
+    return esObjeto(editado) ? { ...fila, ...editado } : fila;
+  }
+
+  const registros = hoja ? hoja.filas.map((_, i) => registroActual(i)) : [];
+  const editadas = new Set(
+    Object.keys(ediciones)
+      .map(Number)
+      .filter((i) => Number.isInteger(i) && i >= 0 && i < totalFilas)
+  );
 
   // Paso actual del flujo, para el indicador de progreso.
-  const pasoActual = !datos ? 1 : !confirmado ? 2 : !original ? 3 : 4;
+  const pasoActual = !hoja ? 1 : !confirmado ? 2 : seleccionado === null ? 3 : 4;
 
   // --- Handlers ---
 
-  // Al recibir un archivo parseado: guardamos datos y autosugerimos el mapeo.
-  function manejarDatos(nuevos: DatosImportados, nombre: string) {
-    setDatos(nuevos);
-    setNombreArchivo(nombre);
-    setMapeo(autosugerirMapeo(nuevos.encabezados));
+  // Al cambiar de hoja o de archivo se pierden las ediciones: avisamos.
+  function aceptaPerderEdiciones(): boolean {
+    if (editadas.size === 0) return true;
+    return window.confirm(
+      `Hay ${editadas.size} fila(s) editada(s). Si continuás se descartan esas ediciones. ¿Continuar?`
+    );
+  }
+
+  // Reinicia todo lo que depende de la hoja en uso.
+  function usarHoja(nuevaHoja: Hoja, indice: number) {
+    setHojaActiva(indice);
+    setCampos(inferirCampos(nuevaHoja));
     setConfirmado(false);
     setSeleccionado(null);
-    setFormulario(CV_VACIO);
+    setEdiciones({});
   }
 
-  function cambiarMapeo(campo: CampoCV, columna: string) {
-    setMapeo((prev) => ({ ...prev, [campo]: columna }));
+  function manejarDatos(nuevo: LibroImportado, nombre: string) {
+    if (!aceptaPerderEdiciones()) return;
+    setLibro(nuevo);
+    setNombreArchivo(nombre);
+    usarHoja(nuevo.hojas[0], 0);
   }
 
-  // Al confirmar, si ya había un candidato elegido, lo recargamos con el
-  // nuevo mapeo (las columnas pueden haber cambiado).
-  function confirmarMapeo() {
-    setConfirmado(true);
-    if (filaElegida) setFormulario(filaACV(filaElegida, mapeo));
+  function cambiarHoja(indice: number) {
+    const nueva = hojas[indice];
+    if (!nueva || indice === hojaActiva) return;
+    if (!aceptaPerderEdiciones()) return;
+    usarHoja(nueva, indice);
   }
 
-  function editarMapeo() {
-    setConfirmado(false);
+  function cambiarCampo(indice: number, cambios: Partial<CampoDinamico>) {
+    setCampos(campos.map((c, i) => (i === indice ? { ...c, ...cambios } : c)));
   }
 
-  // Al elegir un candidato, volcamos su fila al formulario según el mapeo.
-  function seleccionarCandidato(indice: number) {
-    if (!datos) return;
-    const fila = datos.filas[indice];
-    if (!fila) return;
-    setSeleccionado(indice);
-    setFormulario(filaACV(fila, mapeo));
+  function cambiarTodos(visible: boolean) {
+    setCampos(campos.map((c) => ({ ...c, visible })));
   }
 
-  function cambiarFormulario(campo: CampoCV, valor: string) {
-    setFormulario((prev) => ({ ...prev, [campo]: valor }));
+  function seleccionar(indice: number) {
+    if (indice >= 0 && indice < totalFilas) setSeleccionado(indice);
   }
 
-  function restaurarFormulario() {
-    if (original) setFormulario(original);
+  // Guarda la edición de un valor. Si la fila vuelve a ser igual a la del
+  // archivo, se quita de las ediciones para que deje de marcarse.
+  function cambiarValor(columna: string, valor: string) {
+    if (!hoja || seleccionado === null) return;
+    const original = hoja.filas[seleccionado];
+    const nuevo = { ...registroActual(seleccionado), [columna]: valor };
+    const igualAlArchivo = hoja.encabezados.every((col) => (nuevo[col] ?? "") === (original[col] ?? ""));
+    const clave = String(seleccionado);
+    setEdiciones((prev) => {
+      const siguiente = { ...(esObjeto(prev) ? prev : {}) };
+      if (igualAlArchivo) delete siguiente[clave];
+      else siguiente[clave] = nuevo;
+      return siguiente;
+    });
+  }
+
+  function restaurarRegistro() {
+    if (seleccionado === null) return;
+    const clave = String(seleccionado);
+    setEdiciones((prev) => {
+      const siguiente = { ...(esObjeto(prev) ? prev : {}) };
+      delete siguiente[clave];
+      return siguiente;
+    });
   }
 
   // Limpia TODO el estado persistido, previa confirmación del usuario.
   function limpiarDatos() {
     const ok = window.confirm(
-      "¿Borrar el archivo importado, el mapeo y las ediciones guardadas en este navegador?"
+      "¿Borrar el archivo importado, la configuración de campos y las ediciones guardadas en este navegador?"
     );
     if (!ok) return;
-    setDatos(null);
+    setLibro(null);
     setNombreArchivo("");
-    setMapeo(MAPEO_VACIO);
+    setHojaActiva(0);
+    setCampos([]);
     setConfirmado(false);
     setSeleccionado(null);
-    setFormulario(CV_VACIO);
+    setEdiciones({});
   }
 
   return (
     <div className="contenedor">
       <header className="cabecera">
         <div>
-          <h1>Importador de CVs</h1>
+          <h1>Importador de tablas</h1>
           <p className="ayuda">
-            Subí un archivo de candidatos, asociá sus columnas con los campos del
-            CV y editá los datos.
+            Subí un archivo .xlsx o .csv: cada columna se convierte en un campo que
+            podés configurar, ver en una tabla y editar.
           </p>
         </div>
-        {datos && (
+        {hoja && (
           <button className="boton-peligro" onClick={limpiarDatos}>
-            🗑 Limpiar datos
+            Limpiar datos
           </button>
         )}
       </header>
@@ -124,44 +220,52 @@ export default function App() {
 
       <FileUploader
         onDatos={manejarDatos}
-        nombreArchivo={datos ? nombreArchivo : ""}
-        resumen={
-          datos ? `${datos.encabezados.length} columnas, ${datos.filas.length} filas` : undefined
-        }
+        nombreArchivo={hoja ? nombreArchivo : ""}
+        hojas={hojas}
+        hojaActiva={hojaActiva}
+        onCambiarHoja={cambiarHoja}
       />
 
-      {datos && (
-        <ColumnMapper
-          encabezados={datos.encabezados}
-          filas={datos.filas}
-          mapeo={mapeo}
-          onCambiar={cambiarMapeo}
-          onConfirmar={confirmarMapeo}
-          onEditar={editarMapeo}
-          confirmado={confirmado}
+      {hoja && (
+        <FieldConfigurator
+          hoja={hoja}
+          campos={campos}
+          onCambiarCampo={cambiarCampo}
+          onCambiarTodos={cambiarTodos}
+          onConfirmar={() => setConfirmado(true)}
+          onEditar={() => setConfirmado(false)}
+          confirmado={confirmado && camposVisibles.length > 0}
         />
       )}
 
-      {datos && confirmado && (
-        <CandidateSelector
-          datos={datos}
-          mapeo={mapeo}
-          indiceSeleccionado={original ? seleccionado : null}
-          onSeleccionar={seleccionarCandidato}
+      {hoja && confirmado && camposVisibles.length > 0 && (
+        <RecordTable
+          campos={camposVisibles}
+          registros={registros}
+          editadas={editadas}
+          indiceSeleccionado={seleccionado}
+          onSeleccionar={seleccionar}
+          onDescargarCSV={() => descargarCSV(nombreArchivo, camposVisibles, registros)}
+          onDescargarExcel={() => descargarExcel(nombreArchivo, hoja.nombre, camposVisibles, registros)}
         />
       )}
 
-      {confirmado && original && (
-        <CVForm
-          datos={formulario}
-          original={original}
-          onCambiar={cambiarFormulario}
-          onRestaurar={restaurarFormulario}
+      {hoja && confirmado && camposVisibles.length > 0 && seleccionado !== null && (
+        <RecordForm
+          campos={camposVisibles}
+          registro={registros[seleccionado]}
+          original={hoja.filas[seleccionado]}
+          indice={seleccionado}
+          total={totalFilas}
+          onCambiar={cambiarValor}
+          onRestaurar={restaurarRegistro}
+          onAnterior={() => seleccionar(seleccionado - 1)}
+          onSiguiente={() => seleccionar(seleccionado + 1)}
         />
       )}
 
       <footer className="pie">
-        💾 Los cambios se guardan automáticamente en este navegador.
+        Los cambios se guardan automáticamente en este navegador.
       </footer>
     </div>
   );

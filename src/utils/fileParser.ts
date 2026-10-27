@@ -1,47 +1,91 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import type { DatosImportados, FilaArchivo } from "../types";
+import type { Hoja, LibroImportado, Registro } from "../types";
 
 /**
- * Parsea un archivo CSV usando PapaParse.
- *
- * - Detecta automáticamente el separador (coma o punto y coma) dejando
- *   `delimiter` vacío: Papa lo infiere analizando las primeras filas.
- * - Fuerza codificación UTF-8 al leer el archivo.
- * - Usa `header: true` para obtener objetos { columna: valor }.
+ * Convierte cualquier valor de celda a texto.
+ * - Fechas de Excel -> AAAA-MM-DD
+ * - Números -> sin separadores de miles (para poder validarlos después)
  */
-function parsearCSV(archivo: File): Promise<DatosImportados> {
+function valorATexto(valor: unknown): string {
+  if (valor == null) return "";
+  if (valor instanceof Date) {
+    if (Number.isNaN(valor.getTime())) return "";
+    const mm = String(valor.getMonth() + 1).padStart(2, "0");
+    const dd = String(valor.getDate()).padStart(2, "0");
+    return `${valor.getFullYear()}-${mm}-${dd}`;
+  }
+  return String(valor).trim();
+}
+
+/**
+ * Limpia los encabezados: nombra las columnas sin título ("Columna 3")
+ * y desambigua repetidos ("Nombre", "Nombre (2)").
+ * Devuelve también qué columnas no tenían título en el archivo.
+ */
+function limpiarEncabezados(crudos: unknown[]): { nombres: string[]; sinTitulo: Set<string> } {
+  const usados = new Map<string, number>();
+  const sinTitulo = new Set<string>();
+  const nombres = crudos.map((h, i) => {
+    let nombre = valorATexto(h);
+    const vacio = nombre === "";
+    if (vacio) nombre = `Columna ${i + 1}`;
+    const repeticiones = usados.get(nombre) ?? 0;
+    usados.set(nombre, repeticiones + 1);
+    const final = repeticiones === 0 ? nombre : `${nombre} (${repeticiones + 1})`;
+    if (vacio) sinTitulo.add(final);
+    return final;
+  });
+  return { nombres, sinTitulo };
+}
+
+/**
+ * Convierte una matriz de celdas (fila por fila) en una Hoja:
+ * la primera fila con datos son los encabezados y el resto, registros.
+ * Devuelve null si la matriz no tiene contenido.
+ */
+function matrizAHoja(nombre: string, matriz: unknown[][]): Hoja | null {
+  // Descartamos filas totalmente vacías.
+  const filasConDatos = matriz.filter((fila) => fila.some((v) => valorATexto(v) !== ""));
+  if (filasConDatos.length === 0) return null;
+
+  // Ancho real de la tabla (la fila más larga).
+  const ancho = filasConDatos.reduce((max, fila) => Math.max(max, fila.length), 0);
+  const cabecera = Array.from({ length: ancho }, (_, i) => filasConDatos[0][i]);
+  const { nombres, sinTitulo } = limpiarEncabezados(cabecera);
+
+  const filas: Registro[] = filasConDatos.slice(1).map((fila) => {
+    const registro: Registro = {};
+    nombres.forEach((col, i) => {
+      registro[col] = valorATexto(fila[i]);
+    });
+    return registro;
+  });
+
+  // Quitamos columnas sin título que además están totalmente vacías
+  // (típico de Excel con celdas formateadas a la derecha de la tabla).
+  const encabezados = nombres.filter(
+    (col) => !(sinTitulo.has(col) && filas.every((f) => f[col] === ""))
+  );
+
+  return { nombre, encabezados, filas };
+}
+
+/**
+ * Parsea un CSV con PapaParse. El separador (, o ;) se autodetecta y la
+ * codificación es UTF-8. Se lee como matriz para tratar los encabezados
+ * igual que en Excel.
+ */
+function parsearCSV(archivo: File): Promise<Hoja[]> {
   return new Promise((resolve, reject) => {
-    Papa.parse<FilaArchivo>(archivo, {
-      header: true,
-      skipEmptyLines: true,
+    Papa.parse<unknown[]>(archivo, {
+      header: false,
+      skipEmptyLines: "greedy",
       encoding: "utf-8",
       delimiter: "", // "" => PapaParse autodetecta , o ;
-      transformHeader: (h) => h.trim(),
       complete: (resultado) => {
-        const encabezados = (resultado.meta.fields ?? []).map((f) => f.trim());
-
-        if (encabezados.length === 0) {
-          reject(new Error("El archivo CSV no tiene encabezados o está vacío."));
-          return;
-        }
-
-        // Normalizamos cada fila: todo a texto y recortado.
-        const filas: FilaArchivo[] = resultado.data.map((fila) => {
-          const normalizada: FilaArchivo = {};
-          for (const col of encabezados) {
-            const v = (fila as FilaArchivo)[col];
-            normalizada[col] = v == null ? "" : String(v).trim();
-          }
-          return normalizada;
-        });
-
-        if (filas.length === 0) {
-          reject(new Error("El archivo CSV no contiene filas de datos."));
-          return;
-        }
-
-        resolve({ encabezados, filas });
+        const hoja = matrizAHoja(archivo.name, resultado.data);
+        resolve(hoja ? [hoja] : []);
       },
       error: (err) => reject(new Error(`Error al leer el CSV: ${err.message}`)),
     });
@@ -49,75 +93,52 @@ function parsearCSV(archivo: File): Promise<DatosImportados> {
 }
 
 /**
- * Parsea un archivo Excel (.xlsx) usando SheetJS.
- *
- * Lee la primera hoja, toma la primera fila como encabezados y el resto
- * como datos. Todos los valores se convierten a texto para unificar el
- * tratamiento con el CSV.
+ * Parsea un Excel con SheetJS. Lee TODAS las hojas: cada una puede tener
+ * una tabla distinta y el usuario elige cuál usar.
  */
-async function parsearExcel(archivo: File): Promise<DatosImportados> {
+async function parsearExcel(archivo: File): Promise<Hoja[]> {
   const buffer = await archivo.arrayBuffer();
-  const libro = XLSX.read(buffer, { type: "array" });
+  const libro = XLSX.read(buffer, { type: "array", cellDates: true });
 
-  const nombreHoja = libro.SheetNames[0];
-  if (!nombreHoja) {
-    throw new Error("El archivo Excel no contiene ninguna hoja.");
-  }
-
-  const hoja = libro.Sheets[nombreHoja];
-
-  // header: 1 => devuelve una matriz de arrays (fila por fila).
-  const matriz = XLSX.utils.sheet_to_json<string[]>(hoja, {
-    header: 1,
-    blankrows: false,
-    defval: "",
-    raw: false, // formatea números/fechas como texto legible
-  });
-
-  if (matriz.length === 0) {
-    throw new Error("El archivo Excel está vacío.");
-  }
-
-  const encabezados = (matriz[0] ?? []).map((h) => String(h).trim());
-  if (encabezados.length === 0) {
-    throw new Error("La primera hoja del Excel no tiene encabezados.");
-  }
-
-  const filas: FilaArchivo[] = matriz.slice(1).map((fila) => {
-    const normalizada: FilaArchivo = {};
-    encabezados.forEach((col, i) => {
-      const v = fila[i];
-      normalizada[col] = v == null ? "" : String(v).trim();
+  const hojas: Hoja[] = [];
+  for (const nombreHoja of libro.SheetNames) {
+    const matriz = XLSX.utils.sheet_to_json<unknown[]>(libro.Sheets[nombreHoja], {
+      header: 1, // matriz de arrays, fila por fila
+      raw: true, // valores reales (números sin formato, fechas como Date)
+      defval: "",
+      blankrows: false,
     });
-    return normalizada;
-  });
-
-  if (filas.length === 0) {
-    throw new Error("El archivo Excel no contiene filas de datos.");
+    const hoja = matrizAHoja(nombreHoja, matriz);
+    if (hoja) hojas.push(hoja);
   }
-
-  return { encabezados, filas };
+  return hojas;
 }
 
 /**
- * Punto de entrada único: decide el parser según la extensión del archivo.
- * Lanza un error claro si el formato no está soportado.
+ * Punto de entrada único: decide el parser según la extensión y valida
+ * que haya al menos una hoja con encabezados y filas de datos.
  */
-export async function parsearArchivo(archivo: File): Promise<DatosImportados> {
+export async function parsearArchivo(archivo: File): Promise<LibroImportado> {
   if (archivo.size === 0) {
     throw new Error("El archivo está vacío.");
   }
 
   const nombre = archivo.name.toLowerCase();
+  let hojas: Hoja[];
 
   if (nombre.endsWith(".csv")) {
-    return parsearCSV(archivo);
-  }
-  if (nombre.endsWith(".xlsx") || nombre.endsWith(".xls")) {
-    return parsearExcel(archivo);
+    hojas = await parsearCSV(archivo);
+  } else if (nombre.endsWith(".xlsx") || nombre.endsWith(".xls")) {
+    hojas = await parsearExcel(archivo);
+  } else {
+    throw new Error("Formato no soportado. Subí un archivo .csv o .xlsx.");
   }
 
-  throw new Error(
-    "Formato no soportado. Subí un archivo .csv o .xlsx."
-  );
+  // Solo sirven las hojas que tienen al menos una fila de datos.
+  const conDatos = hojas.filter((h) => h.encabezados.length > 0 && h.filas.length > 0);
+  if (conDatos.length === 0) {
+    throw new Error("El archivo no contiene filas de datos (solo encabezados o nada).");
+  }
+
+  return { hojas: conDatos };
 }

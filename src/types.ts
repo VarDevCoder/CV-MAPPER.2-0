@@ -1,63 +1,32 @@
 // Tipos compartidos por toda la aplicación.
+// Nada está fijo: los campos se generan a partir de las columnas del archivo.
 
-// Claves internas de cada campo del formulario de CV.
-export type CampoCV =
-  | "nombreCompleto"
-  | "tituloProfesional"
-  | "anosExperiencia"
-  | "habilidades"
-  | "correo"
-  | "salarioEsperado";
+// Tipo de dato de un campo, inferido de los valores de la columna.
+export type TipoCampo = "texto" | "numero" | "email";
 
-// Definición de un campo del CV: su clave interna, la etiqueta visible
-// y el tipo de dato esperado (para validar).
-export interface DefinicionCampo {
-  clave: CampoCV;
-  etiqueta: string;
-  tipo: "texto" | "numero" | "email";
+// Configuración de un campo dinámico (una por columna del archivo).
+export interface CampoDinamico {
+  columna: string; // nombre original de la columna (clave en cada registro)
+  etiqueta: string; // nombre visible en el formulario (editable)
+  tipo: TipoCampo;
+  visible: boolean; // si se muestra en la tabla y el formulario
+  noNegativo: boolean; // solo para números: exigir valor >= 0
 }
 
-// Catálogo de los 6 campos del formulario, en el orden en que se muestran.
-export const CAMPOS_CV: DefinicionCampo[] = [
-  { clave: "nombreCompleto", etiqueta: "Nombre completo", tipo: "texto" },
-  { clave: "tituloProfesional", etiqueta: "Título profesional", tipo: "texto" },
-  { clave: "anosExperiencia", etiqueta: "Años de experiencia", tipo: "numero" },
-  { clave: "habilidades", etiqueta: "Habilidades", tipo: "texto" },
-  { clave: "correo", etiqueta: "Correo", tipo: "email" },
-  { clave: "salarioEsperado", etiqueta: "Salario esperado", tipo: "numero" },
-];
+// Un registro (fila) del archivo: columna -> valor, todo como texto.
+export type Registro = Record<string, string>;
 
-// Una fila del archivo importado: columna -> valor (todo como texto).
-export type FilaArchivo = Record<string, string>;
-
-// Resultado de parsear un archivo: encabezados y filas.
-export interface DatosImportados {
+// Una hoja del archivo: encabezados en orden y filas de datos.
+export interface Hoja {
+  nombre: string;
   encabezados: string[];
-  filas: FilaArchivo[];
+  filas: Registro[];
 }
 
-// Mapeo campo del CV -> nombre de columna del archivo ("" = sin mapear).
-export type Mapeo = Record<CampoCV, string>;
+// Resultado de importar un archivo. Un CSV produce una sola hoja.
+export interface LibroImportado {
+  hojas: Hoja[];
+}
 
-// Valores del formulario de CV (siempre como texto para poder editarlos).
-export type DatosCV = Record<CampoCV, string>;
-
-// Mapeo vacío inicial.
-export const MAPEO_VACIO: Mapeo = {
-  nombreCompleto: "",
-  tituloProfesional: "",
-  anosExperiencia: "",
-  habilidades: "",
-  correo: "",
-  salarioEsperado: "",
-};
-
-// Formulario de CV vacío inicial.
-export const CV_VACIO: DatosCV = {
-  nombreCompleto: "",
-  tituloProfesional: "",
-  anosExperiencia: "",
-  habilidades: "",
-  correo: "",
-  salarioEsperado: "",
-};
+// Ediciones del usuario por índice de fila (clave como texto por JSON).
+export type Ediciones = Record<string, Registro>;
