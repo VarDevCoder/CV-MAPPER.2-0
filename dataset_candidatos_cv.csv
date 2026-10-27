@@ -1,0 +1,11 @@
+Nombre_Completo;Puesto;Anios_Exp;Skills;Mail;Sueldo_Pretendido
+Ana María Giménez;Desarrolladora Frontend;5;React, TypeScript, CSS;ana.gimenez@mail.com;4500000
+Carlos Rodríguez;Analista de Datos;3;Python, Pandas, SQL;carlos.rodriguez@mail.com;3800000
+Lucía Fernández;Ingeniera de Machine Learning;6;Scikit-Learn, TensorFlow, Python;lucia.fernandez@mail.com;6200000
+Jorge Benítez;Desarrollador Backend;4;Node.js, PostgreSQL, Docker;jorge.benitez@mail.com;4800000
+María José Acosta;Diseñadora UX/UI;7;Figma, Adobe XD, Investigación;mariajose.acosta@mail.com;4200000
+Diego Villalba;DevOps Engineer;8;Kubernetes, AWS, Terraform;diego.villalba@mail.com;7000000
+Sofía Ramírez;Analista de Sistemas;2;Java, Spring, MySQL;sofia.ramirez@mail.com;3200000
+Pedro Cáceres;Científico de Datos;5;Python, PyTorch, Estadística;pedro.caceres@mail.com;5900000
+Valeria Ortiz;QA Automation;3;Selenium, Cypress, Jest;valeria.ortiz@mail.com;3600000
+Martín Duarte;Arquitecto de Software;10;Microservicios, Java, Kafka;martin.duarte@mail.com;8500000
