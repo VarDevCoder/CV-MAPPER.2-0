@@ -1,5 +1,5 @@
-import { CAMPOS_CV, MAPEO_VACIO } from "../types";
-import type { Mapeo, CampoCV } from "../types";
+import { CAMPOS_CV, MAPEO_VACIO, CV_VACIO } from "../types";
+import type { Mapeo, CampoCV, DatosCV, FilaArchivo } from "../types";
 
 /**
  * Normaliza un texto para comparar nombres de columnas:
@@ -77,4 +77,33 @@ export function autosugerirMapeo(encabezados: string[]): Mapeo {
  */
 export function mapeoCompleto(mapeo: Mapeo): boolean {
   return CAMPOS_CV.every((def) => mapeo[def.clave] !== "");
+}
+
+/**
+ * Devuelve las columnas asignadas a más de un campo del CV.
+ * Se usa para avisar al usuario y bloquear la confirmación.
+ */
+export function columnasDuplicadas(mapeo: Mapeo): Set<string> {
+  const usos = new Map<string, number>();
+  for (const def of CAMPOS_CV) {
+    const col = mapeo[def.clave];
+    if (col) usos.set(col, (usos.get(col) ?? 0) + 1);
+  }
+  const duplicadas = new Set<string>();
+  usos.forEach((n, col) => {
+    if (n > 1) duplicadas.add(col);
+  });
+  return duplicadas;
+}
+
+/**
+ * Convierte una fila del archivo en datos del CV según el mapeo.
+ */
+export function filaACV(fila: FilaArchivo, mapeo: Mapeo): DatosCV {
+  const cv: DatosCV = { ...CV_VACIO };
+  for (const def of CAMPOS_CV) {
+    const col = mapeo[def.clave];
+    cv[def.clave] = col ? (fila[col] ?? "") : "";
+  }
+  return cv;
 }

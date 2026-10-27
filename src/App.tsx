@@ -1,15 +1,12 @@
 import { useEffect } from "react";
+import { Stepper } from "./components/Stepper";
 import { FileUploader } from "./components/FileUploader";
 import { ColumnMapper } from "./components/ColumnMapper";
 import { CandidateSelector } from "./components/CandidateSelector";
 import { CVForm } from "./components/CVForm";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { autosugerirMapeo } from "./utils/mapping";
-import {
-  CV_VACIO,
-  MAPEO_VACIO,
-  CAMPOS_CV,
-} from "./types";
+import { autosugerirMapeo, filaACV } from "./utils/mapping";
+import { CV_VACIO, MAPEO_VACIO } from "./types";
 import type { DatosImportados, Mapeo, DatosCV, CampoCV } from "./types";
 
 // Claves de localStorage agrupadas en un solo lugar.
@@ -39,6 +36,15 @@ export default function App() {
     }
   }, [datos, mapeo, setMapeo]);
 
+  // Fila del candidato elegido (null si no hay o si el índice guardado
+  // ya no existe, por ejemplo con un localStorage inconsistente).
+  const filaElegida =
+    datos && seleccionado !== null ? (datos.filas[seleccionado] ?? null) : null;
+  const original = filaElegida ? filaACV(filaElegida, mapeo) : null;
+
+  // Paso actual del flujo, para el indicador de progreso.
+  const pasoActual = !datos ? 1 : !confirmado ? 2 : !original ? 3 : 4;
+
   // --- Handlers ---
 
   // Al recibir un archivo parseado: guardamos datos y autosugerimos el mapeo.
@@ -55,29 +61,40 @@ export default function App() {
     setMapeo((prev) => ({ ...prev, [campo]: columna }));
   }
 
+  // Al confirmar, si ya había un candidato elegido, lo recargamos con el
+  // nuevo mapeo (las columnas pueden haber cambiado).
   function confirmarMapeo() {
     setConfirmado(true);
+    if (filaElegida) setFormulario(filaACV(filaElegida, mapeo));
+  }
+
+  function editarMapeo() {
+    setConfirmado(false);
   }
 
   // Al elegir un candidato, volcamos su fila al formulario según el mapeo.
   function seleccionarCandidato(indice: number) {
     if (!datos) return;
     const fila = datos.filas[indice];
-    const nuevo: DatosCV = { ...CV_VACIO };
-    for (const def of CAMPOS_CV) {
-      const columna = mapeo[def.clave];
-      nuevo[def.clave] = columna ? (fila[columna] ?? "") : "";
-    }
+    if (!fila) return;
     setSeleccionado(indice);
-    setFormulario(nuevo);
+    setFormulario(filaACV(fila, mapeo));
   }
 
   function cambiarFormulario(campo: CampoCV, valor: string) {
     setFormulario((prev) => ({ ...prev, [campo]: valor }));
   }
 
-  // Limpia TODO el estado persistido y vuelve al punto de partida.
+  function restaurarFormulario() {
+    if (original) setFormulario(original);
+  }
+
+  // Limpia TODO el estado persistido, previa confirmación del usuario.
   function limpiarDatos() {
+    const ok = window.confirm(
+      "¿Borrar el archivo importado, el mapeo y las ediciones guardadas en este navegador?"
+    );
+    if (!ok) return;
     setDatos(null);
     setNombreArchivo("");
     setMapeo(MAPEO_VACIO);
@@ -88,51 +105,64 @@ export default function App() {
 
   return (
     <div className="contenedor">
-      <header>
-        <h1>Importador de CVs con mapeo de columnas</h1>
-        <p className="ayuda">
-          Subí un archivo de candidatos, asociá sus columnas con los campos del
-          CV y editá los datos. Todo se guarda en tu navegador.
-        </p>
+      <header className="cabecera">
+        <div>
+          <h1>Importador de CVs</h1>
+          <p className="ayuda">
+            Subí un archivo de candidatos, asociá sus columnas con los campos del
+            CV y editá los datos.
+          </p>
+        </div>
+        {datos && (
+          <button className="boton-peligro" onClick={limpiarDatos}>
+            🗑 Limpiar datos
+          </button>
+        )}
       </header>
 
-      <FileUploader onDatos={manejarDatos} />
+      <Stepper pasoActual={pasoActual} />
+
+      <FileUploader
+        onDatos={manejarDatos}
+        nombreArchivo={datos ? nombreArchivo : ""}
+        resumen={
+          datos ? `${datos.encabezados.length} columnas, ${datos.filas.length} filas` : undefined
+        }
+      />
 
       {datos && (
-        <>
-          <p className="estado">
-            Archivo cargado: <strong>{nombreArchivo}</strong> — {datos.encabezados.length}{" "}
-            columnas, {datos.filas.length} filas.
-          </p>
-
-          <ColumnMapper
-            encabezados={datos.encabezados}
-            mapeo={mapeo}
-            onCambiar={cambiarMapeo}
-            onConfirmar={confirmarMapeo}
-            confirmado={confirmado}
-          />
-
-          {confirmado && (
-            <CandidateSelector
-              datos={datos}
-              mapeo={mapeo}
-              indiceSeleccionado={seleccionado}
-              onSeleccionar={seleccionarCandidato}
-            />
-          )}
-
-          {confirmado && seleccionado !== null && (
-            <CVForm datos={formulario} onCambiar={cambiarFormulario} />
-          )}
-        </>
+        <ColumnMapper
+          encabezados={datos.encabezados}
+          filas={datos.filas}
+          mapeo={mapeo}
+          onCambiar={cambiarMapeo}
+          onConfirmar={confirmarMapeo}
+          onEditar={editarMapeo}
+          confirmado={confirmado}
+        />
       )}
 
-      <section className="tarjeta">
-        <button className="boton-peligro" onClick={limpiarDatos}>
-          Limpiar datos
-        </button>
-      </section>
+      {datos && confirmado && (
+        <CandidateSelector
+          datos={datos}
+          mapeo={mapeo}
+          indiceSeleccionado={original ? seleccionado : null}
+          onSeleccionar={seleccionarCandidato}
+        />
+      )}
+
+      {confirmado && original && (
+        <CVForm
+          datos={formulario}
+          original={original}
+          onCambiar={cambiarFormulario}
+          onRestaurar={restaurarFormulario}
+        />
+      )}
+
+      <footer className="pie">
+        💾 Los cambios se guardan automáticamente en este navegador.
+      </footer>
     </div>
   );
 }

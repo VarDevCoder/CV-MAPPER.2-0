@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 /**
  * Hook propio de persistencia en localStorage.
@@ -10,7 +11,7 @@ import { useState, useEffect } from "react";
 export function useLocalStorage<T>(
   clave: string,
   valorInicial: T
-): [T, React.Dispatch<React.SetStateAction<T>>] {
+): [T, Dispatch<SetStateAction<T>>] {
   // Lectura perezosa: solo se ejecuta en el primer render.
   const [valor, setValor] = useState<T>(() => {
     try {
