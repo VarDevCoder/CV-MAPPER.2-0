@@ -1,3 +1,4 @@
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, PencilLine, RotateCcw } from "lucide-react";
 import type { CampoDinamico, Registro } from "../types";
 import { errorDeCampo, contarErrores } from "../utils/validacion";
 import { columnaTitulo } from "../utils/inferencia";
@@ -68,13 +69,19 @@ export function RecordForm({
           <span className="num-seccion">4</span> Registro {indice + 1} de {total}
         </h2>
         <div className="insignias">
-          {editado && <span className="insignia insignia-info">Editado</span>}
+          {editado && (
+            <span className="insignia insignia-info">
+              <PencilLine size={13} /> Editado
+            </span>
+          )}
           {errores > 0 ? (
             <span className="insignia insignia-error">
-              {errores} error{errores > 1 ? "es" : ""}
+              <AlertCircle size={13} /> {errores} error{errores > 1 ? "es" : ""}
             </span>
           ) : (
-            <span className="insignia insignia-ok">✓ Válido</span>
+            <span className="insignia insignia-ok">
+              <CheckCircle2 size={13} /> Válido
+            </span>
           )}
         </div>
       </div>
@@ -96,7 +103,7 @@ export function RecordForm({
                   {c.etiqueta}
                   {cambiado && (
                     <span className="punto-editado" title="Modificado respecto del archivo">
-                      ●
+                      <PencilLine size={13} />
                     </span>
                   )}
                 </label>
@@ -123,7 +130,7 @@ export function RecordForm({
 
           <div className="acciones campo-ancho">
             <button type="button" className="boton-secundario" disabled={indice === 0} onClick={onAnterior}>
-              ← Anterior
+              <ChevronLeft size={16} /> Anterior
             </button>
             <button
               type="button"
@@ -131,10 +138,10 @@ export function RecordForm({
               disabled={indice >= total - 1}
               onClick={onSiguiente}
             >
-              Siguiente →
+              Siguiente <ChevronRight size={16} />
             </button>
             <button type="button" className="boton-secundario" disabled={!editado} onClick={onRestaurar}>
-              Restaurar valores del archivo
+              <RotateCcw size={15} /> Restaurar valores del archivo
             </button>
           </div>
         </form>

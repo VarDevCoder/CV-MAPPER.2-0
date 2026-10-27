@@ -56,6 +56,39 @@ body {
   line-height: 1.5;
 }
 
+/* --- Íconos (lucide-react) --- */
+.con-icono {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.con-icono svg,
+button svg,
+.insignia svg {
+  flex: none;
+}
+
+.icono-marca {
+  color: var(--primario);
+}
+
+.archivo-icono {
+  display: grid;
+  place-items: center;
+  color: var(--ok);
+}
+
+.girando {
+  animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Oculta visualmente pero mantiene accesible para lectores de pantalla. */
 .sr-only {
   position: absolute;
@@ -437,9 +470,23 @@ tr:last-child td {
   margin: 10px 0 12px;
 }
 
-.barra-tabla .buscador {
+/* Buscador con el ícono de lupa dentro del input. */
+.buscador {
+  position: relative;
   flex: 1 1 240px;
-  margin: 0;
+}
+
+.buscador-icono {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--texto-suave);
+  pointer-events: none;
+}
+
+.buscador input {
+  padding-left: 34px;
 }
 
 .tabla-registros td {
@@ -572,8 +619,8 @@ tr:last-child td {
 }
 
 .punto-editado {
+  display: inline-flex;
   color: var(--primario);
-  font-size: 0.6rem;
 }
 
 .cv-preview {
@@ -667,6 +714,9 @@ tr:last-child td {
 }
 
 .insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.78rem;
   font-weight: 600;
   padding: 3px 10px;
@@ -716,6 +766,10 @@ select[aria-invalid="true"] {
 }
 
 button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   cursor: pointer;
   font-size: 0.9rem;
   font-family: inherit;
@@ -772,6 +826,7 @@ button:disabled {
 
 .pie {
   margin-top: 28px;
+  justify-content: center;
   text-align: center;
   font-size: 0.82rem;
   color: var(--texto-suave);

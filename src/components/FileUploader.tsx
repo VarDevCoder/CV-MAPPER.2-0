@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
+import { AlertCircle, Check, Database, FileSpreadsheet, Layers, Loader2, Upload } from "lucide-react";
 import { parsearArchivo } from "../utils/fileParser";
 import type { Hoja, LibroImportado } from "../types";
 
@@ -83,7 +84,7 @@ export function FileUploader({ onDatos, nombreArchivo, hojas, hojaActiva, onCamb
   return (
     <section className="tarjeta">
       <h2>
-        <span className={`num-seccion${hayArchivo ? " hecho" : ""}`}>{hayArchivo ? "✓" : "1"}</span>{" "}
+        <span className={`num-seccion${hayArchivo ? " hecho" : ""}`}>{hayArchivo ? <Check size={16} strokeWidth={3} /> : "1"}</span>{" "}
         Subir archivo
       </h2>
 
@@ -108,9 +109,14 @@ export function FileUploader({ onDatos, nombreArchivo, hojas, hojaActiva, onCamb
         />
 
         {cargando ? (
-          <span className="dropzone-texto">Procesando archivo…</span>
+          <span className="dropzone-texto con-icono">
+            <Loader2 size={18} className="girando" /> Procesando archivo…
+          </span>
         ) : hayArchivo ? (
           <>
+            <span className="archivo-icono" aria-hidden="true">
+              <FileSpreadsheet size={28} />
+            </span>
             <span className="dropzone-texto">
               <strong>{nombreArchivo}</strong>
               {resumen && <span className="ayuda"> · {resumen}</span>}
@@ -121,10 +127,7 @@ export function FileUploader({ onDatos, nombreArchivo, hojas, hojaActiva, onCamb
         ) : (
           <>
             <span className="dropzone-icono" aria-hidden="true">
-              {/* Flecha de subida dibujada con trazos (sin emojis). */}
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 16V4M6 10l6-6 6 6M4 20h16" />
-              </svg>
+              <Upload size={24} />
             </span>
             <span className="dropzone-texto">
               <strong>Arrastrá tu archivo acá</strong> o <u>hacé clic para elegirlo</u>
@@ -137,7 +140,9 @@ export function FileUploader({ onDatos, nombreArchivo, hojas, hojaActiva, onCamb
 
       {hojas.length > 1 && (
         <div className="selector-hoja">
-          <label htmlFor="hoja-select">Hoja del archivo</label>
+          <label htmlFor="hoja-select" className="con-icono">
+            <Layers size={16} /> Hoja del archivo
+          </label>
           <select
             id="hoja-select"
             value={hojaActiva}
@@ -159,14 +164,14 @@ export function FileUploader({ onDatos, nombreArchivo, hojas, hojaActiva, onCamb
           disabled={cargando}
           onClick={() => void cargarEjemplo()}
         >
-          Usar dataset de ejemplo
+          <Database size={16} /> Usar dataset de ejemplo
         </button>
         <span className="ayuda">{DATASET_EJEMPLO} · 10 candidatos</span>
       </div>
 
       {error && (
-        <p className="alerta alerta-error" role="alert">
-          {error}
+        <p className="alerta alerta-error con-icono" role="alert">
+          <AlertCircle size={18} /> {error}
         </p>
       )}
     </section>

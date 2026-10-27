@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent } from "react";
+import { Check, ChevronLeft, ChevronRight, Download, PencilLine, Search } from "lucide-react";
 import type { CampoDinamico, Registro } from "../types";
 import { normalizar } from "../utils/inferencia";
 import { errorDeCampo } from "../utils/validacion";
@@ -72,7 +73,7 @@ export function RecordTable({
       <div className="tarjeta-cabecera">
         <h2>
           <span className={`num-seccion${indiceSeleccionado !== null ? " hecho" : ""}`}>
-            {indiceSeleccionado !== null ? "✓" : "3"}
+            {indiceSeleccionado !== null ? <Check size={16} strokeWidth={3} /> : "3"}
           </span>{" "}
           Tabla de registros
         </h2>
@@ -82,22 +83,24 @@ export function RecordTable({
       </div>
 
       <div className="barra-tabla">
-        <input
-          type="search"
-          className="buscador"
-          placeholder="Buscar en todas las columnas…"
-          aria-label="Buscar registros"
-          value={busqueda}
-          onChange={(e) => {
-            setBusqueda(e.target.value);
-            setPagina(0);
-          }}
-        />
+        <div className="buscador">
+          <Search size={16} className="buscador-icono" aria-hidden="true" />
+          <input
+            type="search"
+            placeholder="Buscar en todas las columnas…"
+            aria-label="Buscar registros"
+            value={busqueda}
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              setPagina(0);
+            }}
+          />
+        </div>
         <button type="button" className="boton-secundario" onClick={onDescargarCSV}>
-          Descargar CSV
+          <Download size={16} /> Descargar CSV
         </button>
         <button type="button" className="boton-secundario" onClick={onDescargarExcel}>
-          Descargar Excel
+          <Download size={16} /> Descargar Excel
         </button>
       </div>
 
@@ -132,12 +135,14 @@ export function RecordTable({
                     onKeyDown={(e) => manejarTecla(e, indice)}
                   >
                     <td className="col-num">
-                      {indice + 1}
-                      {editada && (
-                        <span className="punto-editado" title="Fila editada">
-                          {" "}●
-                        </span>
-                      )}
+                      <span className="con-icono">
+                        {indice + 1}
+                        {editada && (
+                          <span className="punto-editado" title="Fila editada">
+                            <PencilLine size={13} aria-label="Fila editada" />
+                          </span>
+                        )}
+                      </span>
                     </td>
                     {campos.map((c) => {
                       const valor = registro[c.columna] ?? "";
@@ -168,7 +173,7 @@ export function RecordTable({
               disabled={paginaActual === 0}
               onClick={() => setPagina(paginaActual - 1)}
             >
-              ← Anterior
+              <ChevronLeft size={16} /> Anterior
             </button>
             <span className="ayuda">
               Página {paginaActual + 1} de {totalPaginas}
@@ -179,7 +184,7 @@ export function RecordTable({
               disabled={paginaActual >= totalPaginas - 1}
               onClick={() => setPagina(paginaActual + 1)}
             >
-              Siguiente →
+              Siguiente <ChevronRight size={16} />
             </button>
           </div>
         </div>

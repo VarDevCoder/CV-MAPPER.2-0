@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { Save, Table2, Trash2 } from "lucide-react";
 import { Stepper } from "./components/Stepper";
 import { FileUploader } from "./components/FileUploader";
 import { FieldConfigurator } from "./components/FieldConfigurator";
@@ -203,7 +204,9 @@ export default function App() {
     <div className="contenedor">
       <header className="cabecera">
         <div>
-          <h1>Importador de tablas</h1>
+          <h1 className="con-icono">
+            <Table2 size={28} className="icono-marca" aria-hidden="true" /> Importador de tablas
+          </h1>
           <p className="ayuda">
             Subí un archivo .xlsx o .csv: cada columna se convierte en un campo que
             podés configurar, ver en una tabla y editar.
@@ -211,7 +214,7 @@ export default function App() {
         </div>
         {hoja && (
           <button className="boton-peligro" onClick={limpiarDatos}>
-            Limpiar datos
+            <Trash2 size={16} /> Limpiar datos
           </button>
         )}
       </header>
@@ -264,8 +267,8 @@ export default function App() {
         />
       )}
 
-      <footer className="pie">
-        Los cambios se guardan automáticamente en este navegador.
+      <footer className="pie con-icono">
+        <Save size={14} /> Los cambios se guardan automáticamente en este navegador.
       </footer>
     </div>
   );

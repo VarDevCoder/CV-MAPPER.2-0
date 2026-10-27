@@ -1,3 +1,4 @@
+import { ArrowRight, Check, Eye, EyeOff, Pencil } from "lucide-react";
 import type { CampoDinamico, Hoja, TipoCampo } from "../types";
 
 interface Props {
@@ -52,10 +53,13 @@ export function FieldConfigurator({
       <section className="tarjeta">
         <div className="tarjeta-cabecera">
           <h2>
-            <span className="num-seccion hecho">✓</span> Campos configurados
+            <span className="num-seccion hecho">
+              <Check size={16} strokeWidth={3} />
+            </span>{" "}
+            Campos configurados
           </h2>
           <button className="boton-secundario" onClick={onEditar}>
-            Editar campos
+            <Pencil size={15} /> Editar campos
           </button>
         </div>
         <p className="ayuda">
@@ -93,10 +97,10 @@ export function FieldConfigurator({
 
       <div className="acciones acciones-compactas">
         <button type="button" className="boton-secundario" onClick={() => onCambiarTodos(true)}>
-          Mostrar todos
+          <Eye size={15} /> Mostrar todos
         </button>
         <button type="button" className="boton-secundario" onClick={() => onCambiarTodos(false)}>
-          Ocultar todos
+          <EyeOff size={15} /> Ocultar todos
         </button>
       </div>
 
@@ -199,7 +203,7 @@ export function FieldConfigurator({
 
       <div className="acciones">
         <button className="boton-primario" disabled={!puedeConfirmar} onClick={onConfirmar}>
-          Confirmar campos →
+          Confirmar campos <ArrowRight size={16} />
         </button>
         {!puedeConfirmar && (
           <span className="ayuda">

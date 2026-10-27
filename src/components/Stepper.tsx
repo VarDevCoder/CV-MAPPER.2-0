@@ -1,3 +1,5 @@
+import { Check } from "lucide-react";
+
 // Nombres de los 4 pasos del flujo, en orden.
 const PASOS = ["Subir archivo", "Configurar campos", "Tabla de registros", "Editar registro"];
 
@@ -22,7 +24,7 @@ export function Stepper({ pasoActual }: Props) {
             className={`paso paso-${estado}`}
             aria-current={estado === "actual" ? "step" : undefined}
           >
-            <span className="paso-num">{estado === "hecho" ? "✓" : numero}</span>
+            <span className="paso-num">{estado === "hecho" ? <Check size={14} strokeWidth={3} /> : numero}</span>
             <span className="paso-texto">{texto}</span>
           </li>
         );

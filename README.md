@@ -6,8 +6,9 @@ que se puede configurar, ver en una tabla, editar en un formulario y exportar.
 No hay campos fijos, así que sirve para cualquier tabla. Todo se guarda en
 `localStorage`.
 
-Stack: **Vite + React 18 + TypeScript**, PapaParse (CSV) y SheetJS/xlsx (Excel).
-Sin librerías de UI.
+Stack: **Vite + React 18 + TypeScript**, PapaParse (CSV), SheetJS/xlsx (Excel)
+e íconos SVG de [lucide-react](https://lucide.dev). Sin librerías de
+componentes: los estilos son CSS propio (`src/index.css`, con modo oscuro).
 
 ## Flujo
 
